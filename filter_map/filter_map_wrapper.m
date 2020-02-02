@@ -91,7 +91,7 @@ function filter_map_wrapper(b1plus_nii,varargin)
     Model = filter_map; 
     data = struct();
     
-    data.Raw = double(load_nii_data(b1_plus_nii));
+    data.Raw = double(load_nii_data(b1plus_nii));
 
     % TODO: 
     % Check if Octave is OK with inputParser (and MATLAB version range)
