@@ -1,4 +1,4 @@
-if [ $1 == "latest" ]; then
+if [ $1 = "latest" ]; then
     echo Checking out $1
     git fetch --tags
     latestTag=$(git describe --tags `git rev-list --tags --max-count=1`)
