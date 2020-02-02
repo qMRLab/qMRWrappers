@@ -12,6 +12,10 @@
 %   'mask'              File name for the (.nii.gz formatted)
 %                       binary mask.
 %
+%   'siemens'           Indicates whether the raw B1map is acquired using 
+%                       Siemens TFL B1map sequence [1-0]. If so, the map 
+%                       will be divided by 800. 
+%
 %   'type'              Type of filter
 %                           - gaussian
 %                           - median
