@@ -68,13 +68,16 @@ function filter_map_wrapper(b1plus_nii,varargin)
     % This env var will be consumed by qMRLab
     setenv('ISNEXTFLOW','1');
     
-    if nargin >1
-    if any(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin))))
-        idx = find(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin)))==1);
-        qMRdir = varargin{idx+1};
+    Model = filter_map; 
+    data = struct();
+
+    if nargin>1
+        if any(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin))))
+            idx = find(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin)))==1);
+            qMRdir = varargin{idx+1};
+        end
     end
-    end 
-    
+
     try
         disp('=============================');
         qMRLabVer;
@@ -88,8 +91,45 @@ function filter_map_wrapper(b1plus_nii,varargin)
         qMRLabVer;
     end
     
-    Model = filter_map; 
-    data = struct();
+
+    if nargin >1
+
+        if any(cellfun(@isequal,varargin,repmat({'siemens'},size(varargin))))
+            idx = find(cellfun(@isequal,varargin,repmat({'siemens'},size(varargin)))==1);
+            issiemens = logical(varargin{idx+1});
+        else
+            issiemens = 0;
+        end
+
+        if any(cellfun(@isequal,varargin,repmat({'mask'},size(varargin))))
+            idx = find(cellfun(@isequal,varargin,repmat({'mask'},size(varargin)))==1);
+            data.Mask = double(load_nii_data(varargin{idx+1}));
+        end
+    
+        if any(cellfun(@isequal,varargin,repmat({'type'},size(varargin))))
+            idx = find(cellfun(@isequal,varargin,repmat({'type'},size(varargin)))==1);
+            Model.options.Smoothingfilter_Type = varargin{idx+1};
+        end
+    
+        if any(cellfun(@isequal,varargin,repmat({'dimension'},size(varargin))))
+            idx = find(cellfun(@isequal,varargin,repmat({'dimension'},size(varargin)))==1);
+            Model.options.Smoothingfilter_Dimension = varargin{idx+1};
+        end
+    
+        if any(cellfun(@isequal,varargin,repmat({'order'},size(varargin))))
+            idx = find(cellfun(@isequal,varargin,repmat({'order'},size(varargin)))==1);
+            Model.options.Smoothingfilter_order = varargin{idx+1};
+        end
+    
+        if any(cellfun(@isequal,varargin,repmat({'size'},size(varargin))))
+            idx = find(cellfun(@isequal,varargin,repmat({'size'},size(varargin)))==1);
+            sz = varargin{idx+1};
+            Model.options.Smoothingfilter_sizex= sz(1);
+            Model.options.Smoothingfilter_sizey= sz(2);
+            Model.options.Smoothingfilter_sizez= sz(3);     
+        end
+
+    end 
     
     data.Raw = double(load_nii_data(b1plus_nii));
 
@@ -97,44 +137,12 @@ function filter_map_wrapper(b1plus_nii,varargin)
     % Check if Octave is OK with inputParser (and MATLAB version range)
     % If so use it to reduce the verbosity below.
 
-    if any(cellfun(@isequal,varargin,repmat({'siemens'},size(varargin))))
-        idx = find(cellfun(@isequal,varargin,repmat({'siemens'},size(varargin)))==1);
-        issiemens = logical(varargin{idx+1});
-    else
-        issiemens = 0;
-    end
+    
 
     if issiemens
         data.Raw = data.Raw./800;
     end
 
-    if any(cellfun(@isequal,varargin,repmat({'mask'},size(varargin))))
-        idx = find(cellfun(@isequal,varargin,repmat({'mask'},size(varargin)))==1);
-        data.Mask = double(load_nii_data(varargin{idx+1}));
-    end
-
-    if any(cellfun(@isequal,varargin,repmat({'type'},size(varargin))))
-        idx = find(cellfun(@isequal,varargin,repmat({'type'},size(varargin)))==1);
-        Model.options.Smoothingfilter_Type = varargin{idx+1};
-    end
-
-    if any(cellfun(@isequal,varargin,repmat({'dimension'},size(varargin))))
-        idx = find(cellfun(@isequal,varargin,repmat({'dimension'},size(varargin)))==1);
-        Model.options.Smoothingfilter_Dimension = varargin{idx+1};
-    end
-
-    if any(cellfun(@isequal,varargin,repmat({'order'},size(varargin))))
-        idx = find(cellfun(@isequal,varargin,repmat({'order'},size(varargin)))==1);
-        Model.options.Smoothingfilter_order = varargin{idx+1};
-    end
-
-    if any(cellfun(@isequal,varargin,repmat({'size'},size(varargin))))
-        idx = find(cellfun(@isequal,varargin,repmat({'size'},size(varargin)))==1);
-        sz = varargin{idx+1};
-        Model.options.Smoothingfilter_sizex= sz(1);
-        Model.options.Smoothingfilter_sizey= sz(2);
-        Model.options.Smoothingfilter_sizez= sz(3);     
-    end
     
     % ==== Fit Data ====
     
