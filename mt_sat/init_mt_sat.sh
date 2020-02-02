@@ -1,5 +1,3 @@
-cd qMRWrappers 
-
 if [ $1 == "latest" ]; then
     echo Checking out $1
     git fetch --tags
