@@ -4,6 +4,8 @@ if [ $1 = "latest" ]; then
     latestTag=$(git describe --tags `git rev-list --tags --max-count=1`)
     git checkout $latestTag
     echo Checked out $latestTag
+elif [ $1 = "debug" ]; then
+    echo Debug HEAD is on master latest    
 else
     git checkout $1 
     echo Checked out $1
