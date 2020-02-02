@@ -10,31 +10,31 @@
 % Parameters include:
 %
 %   'mask'              File name for the (.nii.gz formatted)
-%                       binary mask.
+%                       binary mask. (stiring)
 %
 %   'siemens'           Indicates whether the raw B1map is acquired using 
-%                       Siemens TFL B1map sequence [1-0]. If so, the map 
-%                       will be divided by 800. 
+%                       Siemens TFL B1map sequence. If so, the map 
+%                       will be divided by 800. (boolean)
 %
-%   'type'              Type of filter
-%                           - gaussian
-%                           - median
-%                           - spline
-%                           - polynomial
+%   'type'              Type of filter (string)
+%                           - 'gaussian'
+%                           - 'median'
+%                           - 'spline'
+%                           - 'polynomial'
 %
-%   'dimension'         In which dimensions to apply the filter
-%                           - 2D
-%                           - 3D
+%   'dimension'         In which dimensions to apply the filter (string)
+%                           - '2D'
+%                           - '3D'
 %
-%   'order'             Depends on the type selection
+%   'order'             Depends on the type selection (integer)
 %                           - For type polynomial, it is the order of the polynomial.
 %                           - For type spline, it is the 'amount of smoothness'
 %
-%   'size'              Extent of filter in number of voxels (x y z)
+%   'size'              Extent of filter in number of voxels (x y z) (vector)
 %                           - For type gaussian, it is FWHM.
 %                           - For type median, it is number of voxels.
 %       
-%   'qmrlab_path'       Absolute path to the qMRLab's root directory. 
+%   'qmrlab_path'       Absolute path to the qMRLab's root directory. (string)
 % 
 % Outputs: 
 %

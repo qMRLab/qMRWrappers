@@ -30,14 +30,14 @@
 % Parameters include:
 %
 %   'mask'              File name for the (.nii.gz formatted)
-%                       binary mask.
+%                       binary mask. (string)
 %
 %   'b1map'             File name for the (.nii.gz formatted)
-%                       transmit field (B1 plus) map.
+%                       transmit field (B1 plus) map. (string)
 %
-%   'b1factor'          B1 correction factor [0-1]. Default: 0.4
+%   'b1factor'          B1 correction factor [0-1]. Default: 0.4 (double)
 %
-%   'qmrlab_path'       Absolute path to the qMRLab's root directory. 
+%   'qmrlab_path'       Absolute path to the qMRLab's root directory. (string)
 %
 % Outputs: 
 %
