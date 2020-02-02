@@ -12,42 +12,46 @@
 % Required inputs:
 %
 %    Image file names (.nii.gz):
-%        - mtw_nii subID_*
-%        - pdw_nii subID_*
-%        - t1w_nii subID_* 
+%        - mtw_nii --> subID_*.nii.gz (e.g. sub-01_acq-MTon_MTS.nii.gz)
+%        - pdw_nii --> subID_*.nii.gz (e.g. sub-01_acq-MToff_MTS.nii.gz)
+%        - t1w_nii --> subID_*.nii.gz (e.g. sub-01_acq-T1w_MTS.nii.gz) 
 %
 %    Metadata files for BIDS (.json): 
-%        - mtw_jsn subID_*
-%        - pdw_jsn subID_*
-%        - t1w_jsn subID_*
+%        - mtw_jsn --> subID_*.json
+%        - pdw_jsn --> subID_*.json
+%        - t1w_jsn --> subID_*.json
 %
 %    Metadata files for customized convention: 
 %      
 %        - mt_sat_prot.json
 %
-% mt_sat_BIDS(___,PARAM1, VAL1, PARAM2, VAL2,___)
+% mt_sat_wrapper(___,PARAM1, VAL1, PARAM2, VAL2,___)
 %
 % Parameters include:
 %
-%   'mask'           File name for the (.nii.gz formatted)
-%                    binary mask.
+%   'mask'              File name for the (.nii.gz formatted)
+%                       binary mask.
 %
-%   'b1map'          File name for the (.nii.gz formatted)
-%                    transmit field (B1 plus) map.
+%   'b1map'             File name for the (.nii.gz formatted)
+%                       transmit field (B1 plus) map.
 %
-%   'b1factor'       B1 correction factor [0-1]. Default: 0.4
+%   'b1factor'          B1 correction factor [0-1]. Default: 0.4
+%
+%   'qmrlab_path'       Absolute path to the qMRLab's root directory. 
 %
 % Outputs: 
 %
 %    subID_MTsat.nii.gz       Magnetization transfer saturation
 %                             index map.
+%    subID_MTsat.json         Sidecar json for provenance.
 %
 %    subID_T1map.nii.gz       Longitudinal relaxation time map
 %                             in seconds (s).
+%    subID_T1map.json         Sidecar json for provenance.
 %
 %    subID_mt_sat_qmrlab.mat  Object containing qMRLab options. 
 % 
-% Notes:
+% IMPORTANT:
 %
 %    Spurious values    Inf values are set to 0 (masking), negative
 %                       values are set to NaN (imperfect fit).
@@ -75,8 +79,8 @@ function mt_sat_wrapper(mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin
 setenv('ISNEXTFLOW','1');
 
 if nargin >6
-if any(cellfun(@isequal,varargin,repmat({'qMRLab'},size(varargin))))
-    idx = find(cellfun(@isequal,varargin,repmat({'qMRLab'},size(varargin)))==1);
+if any(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin))))
+    idx = find(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin)))==1);
     qMRdir = varargin{idx+1};
 end
 end 
