@@ -128,6 +128,13 @@ function filter_map_wrapper(b1plus_nii,varargin)
             Model.options.Smoothingfilter_sizey= sz(2);
             Model.options.Smoothingfilter_sizez= sz(3);     
         end
+        
+         if any(cellfun(@isequal,varargin,repmat({'sid'},size(varargin))))
+            idx = find(cellfun(@isequal,varargin,repmat({'sid'},size(varargin)))==1);
+            SID = varargin{idx+1};
+         else
+            SID = [];
+        end
 
     end 
     
@@ -157,10 +164,18 @@ function filter_map_wrapper(b1plus_nii,varargin)
     FitResultsSave_nii(FitResults,b1plus_nii,pwd);
     
     % ==== Rename outputs ==== 
-    movefile('Filtered.nii.gz',[getSID(b1plus_nii) '_B1plusmap_filtered.nii.gz']);
-
+    if ~isempty(SID)
+        movefile('Filtered.nii.gz',[SID '_B1plusmap_filtered.nii.gz']);
+    else
+        movefile('Filtered.nii.gz',[SID 'B1plusmap_filtered.nii.gz']);
+    end
+    
     % Save qMRLab object
-    Model.saveObj([getSID(b1plus_nii) '_filter_map.qmrlab.mat']);
+    if ~isempty(SID)
+        Model.saveObj([SID '_filter_map.qmrlab.mat']);
+    else
+        Model.saveObj('filter_map.qmrlab.mat');
+    end
     
     % Remove FitResults.mat 
     delete('FitResults.mat');
@@ -175,15 +190,21 @@ function filter_map_wrapper(b1plus_nii,varargin)
     addField.BasedOn = {b1plus_nii};
     
     provenance = Model.getProvenance('extra',addField);
-    savejson('',provenance,[pwd filesep getSID(b1plus_nii) '_B1plusmap_filtered.json']);
- 
     
-    disp(['Success: ' getSID(b1plus_nii)]);
+    if ~isempty(SID)
+        savejson('',provenance,[pwd filesep SID '_B1plusmap_filtered.json']);
+    else
+        savejson('',provenance,[pwd filesep 'B1plusmap_filtered.json']);
+    end
+ 
+    if ~isempty(SID)
+    disp(['Success: ' SID]);
     disp('-----------------------------');
     disp('Saved: ');
-    disp(['    ' getSID(b1plus_nii) '_B1plusmap_filtered.nii.gz']);
-    disp(['    ' getSID(b1plus_nii) '_B1plusmap_filtered.json'])
+    disp(['    ' SID '_B1plusmap_filtered.nii.gz']);
+    disp(['    ' SID '_B1plusmap_filtered.json'])
     disp('=============================');
+    end
 
     if moxunit_util_platform_is_octave
         warning('on','all');
@@ -192,11 +213,6 @@ function filter_map_wrapper(b1plus_nii,varargin)
     
 end
      
-function sid = getSID(in)
-% ASSUMES SID_*
-sid = in(1:min(strfind(in,'_'))-1);
-
-end
     
 function qmr_init(qmrdir)
 
