@@ -68,9 +68,7 @@ function filter_map_wrapper(b1plus_nii,varargin)
     % This env var will be consumed by qMRLab
     setenv('ISNEXTFLOW','1');
     
-    Model = filter_map; 
-    data = struct();
-
+    
     if nargin>1
         if any(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin))))
             idx = find(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin)))==1);
@@ -91,7 +89,9 @@ function filter_map_wrapper(b1plus_nii,varargin)
         qMRLabVer;
     end
     
-
+    Model = filter_map; 
+    data = struct();
+    
     if nargin >1
 
         if any(cellfun(@isequal,varargin,repmat({'siemens'},size(varargin))))
