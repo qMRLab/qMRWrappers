@@ -96,7 +96,7 @@ function filter_map_wrapper(b1plus_nii,varargin)
 
         if any(cellfun(@isequal,varargin,repmat({'siemens'},size(varargin))))
             idx = find(cellfun(@isequal,varargin,repmat({'siemens'},size(varargin)))==1);
-            issiemens = logical(varargin{idx+1});
+            issiemens = varargin{idx+1};
         else
             issiemens = 0;
         end
