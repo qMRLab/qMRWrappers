@@ -123,6 +123,13 @@ if nargin>6
         Model.options.B1correctionfactor = varargin{idx+1};
     end
     
+    if any(cellfun(@isequal,varargin,repmat({'sid'},size(varargin))))
+        idx = find(cellfun(@isequal,varargin,repmat({'sid'},size(varargin)))==1);
+        SID = varargin{idx+1};
+    else
+        SID = [];
+    end
+    
     
     if customFlag
         % Collect parameters when non-BIDS pipeline is used.
@@ -181,11 +188,20 @@ disp('Saving fit results...');
 FitResultsSave_nii(FitResults,mtw_nii,pwd);
 
 % ==== Rename outputs ==== 
-movefile('T1.nii.gz',[getSID(mtw_nii) '_T1map.nii.gz']);
-movefile('MTSAT.nii.gz',[getSID(mtw_nii) '_MTsat.nii.gz']);
+if ~isempty(SID)
+    movefile('T1.nii.gz',[SID '_T1map.nii.gz']);
+    movefile('MTSAT.nii.gz',[SID '_MTsat.nii.gz']);
+else
+    movefile('T1.nii.gz','T1map.nii.gz');
+    movefile('MTSAT.nii.gz','MTsat.nii.gz');    
+end
 
 % Save qMRLab object
-Model.saveObj([getSID(mtw_nii) '_mt_sat.qmrlab.mat']);
+if ~isempty(SID)
+    Model.saveObj([SID '_mt_sat.qmrlab.mat']);
+else
+    Model.saveObj('mt_sat.qmrlab.mat');    
+end
 
 % Remove FitResults.mat 
 delete('FitResults.mat');
@@ -196,17 +212,26 @@ addField.EstimationAlgorithm =  'src/Models_Functions/MTSATfun/MTSAT_exec.m';
 addField.BasedOn = [{mtw_nii},{pdw_nii},{t1w_nii}];
 
 provenance = Model.getProvenance('extra',addField);
-savejson('',provenance,[pwd filesep getSID(mtw_nii) '_T1map.json']);
-savejson('',provenance,[pwd filesep getSID(mtw_nii) '_MTsat.json']);
 
-disp(['Success: ' getSID(mtw_nii)]);
+if ~isempty(SID)
+    savejson('',provenance,[pwd filesep SID '_T1map.json']);
+    savejson('',provenance,[pwd filesep SID '_MTsat.json']);
+else
+    savejson('',provenance,[pwd filesep 'T1map.json']);
+    savejson('',provenance,[pwd filesep 'MTsat.json']);
+end
+
+if ~isempty(SID)
+disp(['Success: ' SID]);
 disp('-----------------------------');
 disp('Saved: ');
-disp(['    ' getSID(mtw_nii) '_T1map.nii.gz'])
-disp(['    ' getSID(mtw_nii) '_MTsat.nii.gz'])
-disp(['    ' getSID(mtw_nii) '_T1map.json'])
-disp(['    ' getSID(mtw_nii) '_MTsat.json'])
+disp(['    ' SID '_T1map.nii.gz'])
+disp(['    ' SID '_MTsat.nii.gz'])
+disp(['    ' SID '_T1map.json'])
+disp(['    ' SID '_MTsat.json'])
 disp('=============================');
+end
+
 if moxunit_util_platform_is_octave
     warning('on','all');
 end
@@ -230,12 +255,6 @@ else
 end
 
 end 
-
-function sid = getSID(in)
-% ASSUMES SID_*
-sid = in(1:min(strfind(in,'_'))-1);
-
-end
 
 function qmr_init(qmrdir)
 
