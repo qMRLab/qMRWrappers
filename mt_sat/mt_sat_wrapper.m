@@ -139,9 +139,9 @@ if nargin>6
            prt = json2struct(varargin{idx+1});
            
            % Set protocol from mt_sat_prot.json
-           Model.Prot.MTw.Mat =[prt.MTw.FlipAngle prt.MTw.RepetitionTime/1000];
-           Model.Prot.PDw.Mat =[prt.PDw.FlipAngle prt.PDw.RepetitionTime/1000];
-           Model.Prot.T1w.Mat =[prt.T1w.FlipAngle prt.T1w.RepetitionTime/1000];
+           Model.Prot.MTw.Mat =[prt.MTw.FlipAngle prt.MTw.RepetitionTime];
+           Model.Prot.PDw.Mat =[prt.PDw.FlipAngle prt.PDw.RepetitionTime];
+           Model.Prot.T1w.Mat =[prt.T1w.FlipAngle prt.T1w.RepetitionTime];
            
     end
          
@@ -157,11 +157,11 @@ data.T1w=double(load_nii_data(t1w_nii));
 
 if ~customFlag
 
-    % RepetitionTime --> RepetitionTime in BIDS (ms)
+    % RepetitionTime in BIDS (s)
     % qMRLab Repetition time is in (s). 
-    Model.Prot.MTw.Mat =[getfield(json2struct(mtw_jsn),'FlipAngle') getfield(json2struct(mtw_jsn),'RepetitionTime')/1000];
-    Model.Prot.PDw.Mat =[getfield(json2struct(pdw_jsn),'FlipAngle') getfield(json2struct(pdw_jsn),'RepetitionTime')/1000];
-    Model.Prot.T1w.Mat =[getfield(json2struct(t1w_jsn),'FlipAngle') getfield(json2struct(t1w_jsn),'RepetitionTime')/1000];
+    Model.Prot.MTw.Mat =[getfield(json2struct(mtw_jsn),'FlipAngle') getfield(json2struct(mtw_jsn),'RepetitionTime')];
+    Model.Prot.PDw.Mat =[getfield(json2struct(pdw_jsn),'FlipAngle') getfield(json2struct(pdw_jsn),'RepetitionTime')];
+    Model.Prot.T1w.Mat =[getfield(json2struct(t1w_jsn),'FlipAngle') getfield(json2struct(t1w_jsn),'RepetitionTime')];
 
 end
 
