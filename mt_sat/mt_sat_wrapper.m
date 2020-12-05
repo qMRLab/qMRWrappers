@@ -78,13 +78,28 @@ function mt_sat_wrapper(mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin
 % This env var will be consumed by qMRLab
 setenv('ISNEXTFLOW','1');
 
-if nargin >6
-if any(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin))))
-    idx = find(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin)))==1);
-    qMRdir = varargin{idx+1};
-end
-end 
+p = inputParser;
 
+%Input parameters conditions
+validNii = @(x) exist(x,'file') && strcmp(x(end-5:end),'nii.gz');
+validJsn = @(x) exist(x,'file') && strcmp(x(end-3:end),'json');
+
+%Add REQUIRED Parameteres
+addRequired(p,'mtw_nii',validNii);
+addRequired(p,'pdw_nii',validNii);
+addRequired(p,'t1w_nii',validNii);
+addRequired(p,'mtw_jsn',validJsn);
+addRequired(p,'pdw_jsn',validJsn);
+addRequired(p,'t1w_jsn',validJsn);
+
+%Add OPTIONAL Parameteres
+addParameter(p,'mask',validNii);
+addParameter(p,'qmrlab_path',@isfolder);
+addParameter(p,'sid',@ischar);
+
+parse(p,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin{:});
+
+qMRdir = qmrlab_path;
 try
     disp('=============================');
     qMRLabVer;
@@ -98,39 +113,18 @@ catch
     qMRLabVer;
 end
 
+% ==== Set Protocol ====
 Model = mt_sat; 
 data = struct();
 
-customFlag = 0;
-if all([isempty(mtw_jsn) isempty(pdw_jsn) isempty(t1w_jsn)]); customFlag = 1; end; 
+% Load data
+data.MTw=double(load_nii_data(mtw_nii));
+data.PDw=double(load_nii_data(pdw_nii));
+data.T1w=double(load_nii_data(t1w_nii));
 
-% Account for optional inputs and options.
-if nargin>6
-    
-    
-    if any(cellfun(@isequal,varargin,repmat({'mask'},size(varargin))))
-        idx = find(cellfun(@isequal,varargin,repmat({'mask'},size(varargin)))==1);
-        data.Mask = double(load_nii_data(varargin{idx+1}));
-    end
-    
-    if any(cellfun(@isequal,varargin,repmat({'b1map'},size(varargin))))
-        idx = find(cellfun(@isequal,varargin,repmat({'b1map'},size(varargin)))==1);
-        data.B1map = double(load_nii_data(varargin{idx+1}));
-    end
-    
-    if any(cellfun(@isequal,varargin,repmat({'b1factor'},size(varargin))))
-        idx = find(cellfun(@isequal,varargin,repmat({'b1factor'},size(varargin)))==1);
-        Model.options.B1correctionfactor = varargin{idx+1};
-    end
-    
-    if any(cellfun(@isequal,varargin,repmat({'sid'},size(varargin))))
-        idx = find(cellfun(@isequal,varargin,repmat({'sid'},size(varargin)))==1);
-        SID = varargin{idx+1};
-    else
-        SID = [];
-    end
-    
-    
+customFlag = 0;
+if all([isempty(mtw_jsn) isempty(pdw_jsn) isempty(t1w_jsn)]); customFlag = 1; end;
+
     if customFlag
         % Collect parameters when non-BIDS pipeline is used.
         
@@ -147,12 +141,6 @@ if nargin>6
          
     
 end
-
-
-% Load data
-data.MTw=double(load_nii_data(mtw_nii));
-data.PDw=double(load_nii_data(pdw_nii));
-data.T1w=double(load_nii_data(t1w_nii));
 
 
 if ~customFlag
