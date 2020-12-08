@@ -83,6 +83,7 @@ p = inputParser;
 %Input parameters conditions
 validNii = @(x) exist(x,'file') && strcmp(x(end-5:end),'nii.gz');
 validJsn = @(x) exist(x,'file') && strcmp(x(end-3:end),'json');
+validB1factor = @(x) isnumeric(x) && (x > 0 && x <= 1);
 
 %Add REQUIRED Parameteres
 addRequired(p,'mtw_nii',validNii);
@@ -94,6 +95,8 @@ addRequired(p,'t1w_jsn',validJsn);
 
 %Add OPTIONAL Parameteres
 addParameter(p,'mask',validNii);
+addParameter(p,'b1map',validNii);
+addParameter(p,'b1factor',validB1factor);
 addParameter(p,'qmrlab_path',@isfolder);
 addParameter(p,'sid',@ischar);
 
@@ -121,6 +124,13 @@ data = struct();
 data.MTw=double(load_nii_data(mtw_nii));
 data.PDw=double(load_nii_data(pdw_nii));
 data.T1w=double(load_nii_data(t1w_nii));
+
+data.Mask = double(load_nii_data(mask));
+data.b1map = double(load_nii_data(b1map));
+
+Model.options.B1correction = params.b1cor_factor;
+SID = sid;
+
 
 customFlag = 0;
 if all([isempty(mtw_jsn) isempty(pdw_jsn) isempty(t1w_jsn)]); customFlag = 1; end;
