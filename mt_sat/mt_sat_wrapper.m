@@ -204,6 +204,7 @@ end
 % Remove FitResults.mat 
 delete('FitResults.mat');
 
+%J SON files for T1map and MTsat
 addField = struct();
 addField.EstimationReference =  'Helms, G. et al. (2008), Magn Reson Med, 60:1396-1407';
 addField.EstimationAlgorithm =  'src/Models_Functions/MTSATfun/MTSAT_exec.m';
@@ -218,6 +219,24 @@ else
     savejson('',provenance,[pwd filesep 'T1map.json']);
     savejson('',provenance,[pwd filesep 'MTsat.json']);
 end
+
+% JSON file for dataset_description
+addDescription = struct();
+addDescription.Name = 'qMRLab Outputs';
+addDescription.BIDSVersion = '1.5.0';
+addDescription.DatasetType = 'derivative';
+addDescription.GeneratedBy.Name = 'qMRLab';
+addDescription.GeneratedBy.Version = qMRLabVer;
+addDescription.GeneratedBy.Container.Type = 'docker (if Docker{enabled = true})';
+addDescription.GeneratedBy.Container.Tag = 'qmrlab/minimal:2.4.1';
+addDescription.GeneratedBy.Name2 = 'Manual';
+addDescription.GeneratedBy.Description = 'Generated example T1map outputs';
+addDescription.SourceDatasets.DOI = 'DOI 10.17605/OSF.IO/K4BS5';
+addDescription.SourceDatasets.URL = 'https://osf.iok4bs5/';
+addDescription.SourceDatasets.Version = '1';
+
+savejson('',addDescription,[pwd filesep 'dataset_description.json']);
+
 
 if ~isempty(SID)
 disp(['Success: ' SID]);
