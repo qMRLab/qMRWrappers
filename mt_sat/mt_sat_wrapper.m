@@ -148,10 +148,6 @@ if all([isempty(mtw_jsn) isempty(pdw_jsn) isempty(t1w_jsn)]); customFlag = 1; en
            Model.Prot.T1w.Mat =[prt.T1w.FlipAngle prt.T1w.RepetitionTime];
            
     end
-         
-    
-end
-
 
 if ~customFlag
 
