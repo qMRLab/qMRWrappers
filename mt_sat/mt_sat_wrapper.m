@@ -102,7 +102,7 @@ addParameter(p,'sid',@ischar);
 
 parse(p,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin{:});
 
-qMRdir = params.qmrlab_path;
+qMRdir = p.Results.qmrlab_path;
 try
     disp('=============================');
     qMRLabVer;
@@ -125,11 +125,11 @@ data.MTw=double(load_nii_data(mtw_nii));
 data.PDw=double(load_nii_data(pdw_nii));
 data.T1w=double(load_nii_data(t1w_nii));
 
-data.Mask = double(load_nii_data(mask));
-data.b1map = double(load_nii_data(b1map));
+data.Mask = double(load_nii_data(p.Results.mask));
+data.b1map = double(load_nii_data(p.Results.b1map));
 
-Model.options.B1correction = params.b1cor_factor;
-SID = sid;
+Model.options.B1correction = p.Results.b1factor;
+SID = p.Results.sid;
 
 
 customFlag = 0;
