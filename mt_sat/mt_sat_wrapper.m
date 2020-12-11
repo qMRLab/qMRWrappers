@@ -102,7 +102,7 @@ addParameter(p,'sid',@ischar);
 
 parse(p,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin{:});
 
-qMRdir = qmrlab_path;
+qMRdir = params.qmrlab_path;
 try
     disp('=============================');
     qMRLabVer;
@@ -117,7 +117,7 @@ catch
 end
 
 % ==== Set Protocol ====
-Model = mt_sat; 
+Model = mt_sat;
 data = struct();
 
 % Load data
