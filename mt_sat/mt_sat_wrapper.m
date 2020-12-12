@@ -86,19 +86,19 @@ validJsn = @(x) exist(x,'file') && strcmp(x(end-3:end),'json');
 validB1factor = @(x) isnumeric(x) && (x > 0 && x <= 1);
 
 %Add REQUIRED Parameteres
-addRequired(p,'mtw_nii',validNii);
-addRequired(p,'pdw_nii',validNii);
-addRequired(p,'t1w_nii',validNii);
-addRequired(p,'mtw_jsn',validJsn);
-addRequired(p,'pdw_jsn',validJsn);
-addRequired(p,'t1w_jsn',validJsn);
+p.addRequired('mtw_nii',validNii);
+p.addRequired('pdw_nii',validNii);
+p.addRequired('t1w_nii',validNii);
+p.addRequired('mtw_jsn',validJsn);
+p.addRequired('pdw_jsn',validJsn);
+p.addRequired('t1w_jsn',validJsn);
 
 %Add OPTIONAL Parameteres
-addParameter(p,'mask',validNii);
-addParameter(p,'b1map',validNii);
-addParameter(p,'b1factor',validB1factor);
-addParameter(p,'qmrlab_path',@isfolder);
-addParameter(p,'sid',@ischar);
+p.addParameter('mask',validNii);
+p.addParameter('b1map',validNii);
+p.addParameter('b1factor',validB1factor);
+p.addParameter('qmrlab_path',@isfolder);
+p.addParameter('sid',@ischar);
 
 parse(p,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin{:});
 
