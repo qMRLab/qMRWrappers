@@ -102,7 +102,10 @@ addParameter(p,'sid',@ischar);
 
 parse(p,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin{:});
 
-qMRdir = p.Results.qmrlab_path;
+if any(cellfun(@(x) isequal(x,'qmrlab_path'),varargin))
+    qMRdir = p.Results.qmrlab_path;
+end
+
 try
     disp('=============================');
     qMRLabVer;
@@ -125,16 +128,33 @@ data.MTw=double(load_nii_data(mtw_nii));
 data.PDw=double(load_nii_data(pdw_nii));
 data.T1w=double(load_nii_data(t1w_nii));
 
-data.Mask = double(load_nii_data(p.Results.mask));
-data.b1map = double(load_nii_data(p.Results.b1map));
 
-Model.options.B1correction = p.Results.b1factor;
-SID = p.Results.sid;
+
 
 
 customFlag = 0;
 if all([isempty(mtw_jsn) isempty(pdw_jsn) isempty(t1w_jsn)]); customFlag = 1; end;
 
+%Account for optional inputs and options
+if nargin>6
+    if any(cellfun(@(x) isequal(x,'mask'),varargin))
+        data.Mask = double(load_nii_data(p.Results.mask));
+    end
+
+    if any(cellfun(@(x) isequal(x,'b1map'),varargin))
+        data.b1map = double(load_nii_data(p.Results.b1map));
+    end
+
+    if any(cellfun(@(x) isequal(x,'b1map'),varargin))
+        Model.options.B1correction = p.Results.b1factor;
+    end
+
+    if any(cellfun(@(x) isequal(x,'sid'),varargin))
+        SID = p.Results.sid;
+    else
+        SID = [];
+    end
+    
     if customFlag
         % Collect parameters when non-BIDS pipeline is used.
         
@@ -148,6 +168,7 @@ if all([isempty(mtw_jsn) isempty(pdw_jsn) isempty(t1w_jsn)]); customFlag = 1; en
            Model.Prot.T1w.Mat =[prt.T1w.FlipAngle prt.T1w.RepetitionTime];
            
     end
+end
 
 if ~customFlag
 
