@@ -78,7 +78,7 @@ function mt_sat_wrapper(mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin
 % This env var will be consumed by qMRLab
 setenv('ISNEXTFLOW','1');
 
-p = inputParser;
+p = inputParser();
 
 %Input parameters conditions
 validNii = @(x) exist(x,'file') && strcmp(x(end-5:end),'nii.gz');
@@ -97,7 +97,7 @@ addRequired(p,'t1w_jsn',validJsn);
 addParameter(p,'mask',validNii);
 addParameter(p,'b1map',validNii);
 addParameter(p,'b1factor',validB1factor);
-addParameter(p,'qmrlab_path',@isfolder);
+addParameter(p,'qmrlab_path',@ischar);
 addParameter(p,'sid',@ischar);
 
 parse(p,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin{:});
