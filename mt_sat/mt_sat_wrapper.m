@@ -145,7 +145,7 @@ if nargin>6
         data.b1map = double(load_nii_data(p.Results.b1map));
     end
 
-    if any(cellfun(@(x) isequal(x,'b1map'),varargin))
+    if any(cellfun(@(x) isequal(x,'b1factor'),varargin))
         Model.options.B1correction = p.Results.b1factor;
     end
 
