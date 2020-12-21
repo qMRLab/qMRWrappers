@@ -94,15 +94,15 @@ addRequired(p,'pdw_jsn',validJsn);
 addRequired(p,'t1w_jsn',validJsn);
 
 %Add OPTIONAL Parameteres
-addParameter(p,'mask',validNii);
-addParameter(p,'b1map',validNii);
-addParameter(p,'b1factor',validB1factor);
-addParameter(p,'qmrlab_path',@ischar);
-addParameter(p,'sid',@ischar);
+addParameter(p,'mask',[],validNii);
+addParameter(p,'b1map',[],validNii);
+addParameter(p,'b1factor',[],validB1factor);
+addParameter(p,'qmrlab_path',[],@ischar);
+addParameter(p,'sid',[],@ischar);
 
 parse(p,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin{:});
 
-if any(cellfun(@(x) isequal(x,'qmrlab_path'),varargin))
+if ~isempty(p.Results.qmrlab_path)
     qMRdir = p.Results.qmrlab_path;
 end
 
@@ -128,28 +128,24 @@ data.MTw=double(load_nii_data(mtw_nii));
 data.PDw=double(load_nii_data(pdw_nii));
 data.T1w=double(load_nii_data(t1w_nii));
 
-
-
-
-
 customFlag = 0;
 if all([isempty(mtw_jsn) isempty(pdw_jsn) isempty(t1w_jsn)]); customFlag = 1; end;
 
 %Account for optional inputs and options
 if nargin>6
-    if any(cellfun(@(x) isequal(x,'mask'),varargin))
+    if ~isempty(p.Results.mask)
         data.Mask = double(load_nii_data(p.Results.mask));
     end
 
-    if any(cellfun(@(x) isequal(x,'b1map'),varargin))
+    if ~isempty(p.Results.b1map)
         data.b1map = double(load_nii_data(p.Results.b1map));
     end
 
-    if any(cellfun(@(x) isequal(x,'b1factor'),varargin))
+    if ~isempty(p.Results.b1factor)
         Model.options.B1correction = p.Results.b1factor;
     end
 
-    if any(cellfun(@(x) isequal(x,'sid'),varargin))
+    if ~isempty(p.Results.sid)
         SID = p.Results.sid;
     else
         SID = [];
