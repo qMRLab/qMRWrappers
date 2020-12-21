@@ -102,9 +102,7 @@ addParameter(p,'sid',[],@ischar);
 
 parse(p,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin{:});
 
-if ~isempty(p.Results.qmrlab_path)
-    qMRdir = p.Results.qmrlab_path;
-end
+if ~isempty(p.Results.qmrlab_path); qMRdir = p.Results.qmrlab_path; end
 
 try
     disp('=============================');
@@ -128,42 +126,24 @@ data.MTw=double(load_nii_data(mtw_nii));
 data.PDw=double(load_nii_data(pdw_nii));
 data.T1w=double(load_nii_data(t1w_nii));
 
-customFlag = 0;
-if all([isempty(mtw_jsn) isempty(pdw_jsn) isempty(t1w_jsn)]); customFlag = 1; end;
-
 %Account for optional inputs and options
-if nargin>6
-    if ~isempty(p.Results.mask)
-        data.Mask = double(load_nii_data(p.Results.mask));
-    end
+if ~isempty(p.Results.mask); data.Mask = double(load_nii_data(p.Results.mask)); end
+if ~isempty(p.Results.b1map); data.b1map = double(load_nii_data(p.Results.b1map)); end
+if ~isempty(p.Results.b1factor); Model.options.B1correction = p.Results.b1factor; end
+if ~isempty(p.Results.sid); SID = p.Results.sid; end
 
-    if ~isempty(p.Results.b1map)
-        data.b1map = double(load_nii_data(p.Results.b1map));
-    end
+customFlag = 0;
+if all([isempty(mtw_jsn) isempty(pdw_jsn) isempty(t1w_jsn)]); customFlag = 1; end
 
-    if ~isempty(p.Results.b1factor)
-        Model.options.B1correction = p.Results.b1factor;
-    end
-
-    if ~isempty(p.Results.sid)
-        SID = p.Results.sid;
-    else
-        SID = [];
-    end
+if customFlag
+    % Collect parameters when non-BIDS pipeline is used.
+    idx = find(cellfun(@isequal,varargin,repmat({'custom_json'},size(varargin)))==1);
+    prt = json2struct(varargin{idx+1});
     
-    if customFlag
-        % Collect parameters when non-BIDS pipeline is used.
-        
-           
-           idx = find(cellfun(@isequal,varargin,repmat({'custom_json'},size(varargin)))==1);
-           prt = json2struct(varargin{idx+1});
-           
-           % Set protocol from mt_sat_prot.json
-           Model.Prot.MTw.Mat =[prt.MTw.FlipAngle prt.MTw.RepetitionTime];
-           Model.Prot.PDw.Mat =[prt.PDw.FlipAngle prt.PDw.RepetitionTime];
-           Model.Prot.T1w.Mat =[prt.T1w.FlipAngle prt.T1w.RepetitionTime];
-           
-    end
+    % Set protocol from mt_sat_prot.json
+    Model.Prot.MTw.Mat =[prt.MTw.FlipAngle prt.MTw.RepetitionTime];
+    Model.Prot.PDw.Mat =[prt.PDw.FlipAngle prt.PDw.RepetitionTime];
+    Model.Prot.T1w.Mat =[prt.T1w.FlipAngle prt.T1w.RepetitionTime];
 end
 
 if ~customFlag
@@ -243,7 +223,7 @@ addDescription.GeneratedBy.Version = qMRLabVer;
 addDescription.GeneratedBy.Container.Type = 'docker (if Docker{enabled = true})';
 addDescription.GeneratedBy.Container.Tag = 'qmrlab/minimal:2.4.1';
 addDescription.GeneratedBy.Name2 = 'Manual';
-addDescription.GeneratedBy.Description = 'Generated example T1map outputs';
+addDescription.GeneratedBy.Description = 'Generated example MTsat outputs';
 addDescription.SourceDatasets.DOI = 'DOI 10.17605/OSF.IO/K4BS5';
 addDescription.SourceDatasets.URL = 'https://osf.iok4bs5/';
 addDescription.SourceDatasets.Version = '1';
