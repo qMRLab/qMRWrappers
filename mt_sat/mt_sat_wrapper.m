@@ -99,6 +99,12 @@ addParameter(p,'b1map',[],validNii);
 addParameter(p,'b1factor',[],validB1factor);
 addParameter(p,'qmrlab_path',[],@ischar);
 addParameter(p,'sid',[],@ischar);
+addParameter(p,'containerType',@ischar);
+addParameter(p,'containerTag',@ischar);
+addParameter(p,'description',@ischar);
+addParameter(p,'datasetDOI',@ischar);
+addParameter(p,'datasetURL',@ischar);
+addParameter(p,'datasetVersion',@ischar);
 
 parse(p,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin{:});
 
@@ -197,7 +203,7 @@ end
 % Remove FitResults.mat 
 delete('FitResults.mat');
 
-%J SON files for T1map and MTsat
+% JSON files for T1map and MTsat
 addField = struct();
 addField.EstimationReference =  'Helms, G. et al. (2008), Magn Reson Med, 60:1396-1407';
 addField.EstimationAlgorithm =  'src/Models_Functions/MTSATfun/MTSAT_exec.m';
@@ -219,14 +225,14 @@ addDescription.Name = 'qMRLab Outputs';
 addDescription.BIDSVersion = '1.5.0';
 addDescription.DatasetType = 'derivative';
 addDescription.GeneratedBy.Name = 'qMRLab';
-addDescription.GeneratedBy.Version = qMRLabVer;
-addDescription.GeneratedBy.Container.Type = 'docker (if Docker{enabled = true})';
-addDescription.GeneratedBy.Container.Tag = 'qmrlab/minimal:2.4.1';
+addDescription.GeneratedBy.Version = qMRLabVer();
+addDescription.GeneratedBy.Container.Type = p.Results.containerType;
+addDescription.GeneratedBy.Container.Tag = p.Results.containerTag;
 addDescription.GeneratedBy.Name2 = 'Manual';
-addDescription.GeneratedBy.Description = 'Generated example MTsat outputs';
-addDescription.SourceDatasets.DOI = 'DOI 10.17605/OSF.IO/K4BS5';
-addDescription.SourceDatasets.URL = 'https://osf.iok4bs5/';
-addDescription.SourceDatasets.Version = '1';
+addDescription.GeneratedBy.Description = p.Results.description;
+addDescription.SourceDatasets.DOI = p.Results.datasetDOI;
+addDescription.SourceDatasets.URL = p.Results.datasetURL;
+addDescription.SourceDatasets.Version = p.Results.datasetVersion;
 
 savejson('',addDescription,[pwd filesep 'dataset_description.json']);
 
