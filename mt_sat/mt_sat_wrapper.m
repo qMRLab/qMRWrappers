@@ -102,9 +102,9 @@ addParameter(p,'sid',[],@ischar);
 addParameter(p,'containerType',@ischar);
 addParameter(p,'containerTag',@ischar);
 addParameter(p,'description',@ischar);
-addParameter(p,'datasetDOI',@ischar);
-addParameter(p,'datasetURL',@ischar);
-addParameter(p,'datasetVersion',@ischar);
+addParameter(p,'datasetDOI',[],@ischar);
+addParameter(p,'datasetURL',[],@ischar);
+addParameter(p,'datasetVersion',[],@ischar);
 
 parse(p,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin{:});
 
@@ -230,9 +230,9 @@ addDescription.GeneratedBy.Container.Type = p.Results.containerType;
 addDescription.GeneratedBy.Container.Tag = p.Results.containerTag;
 addDescription.GeneratedBy.Name2 = 'Manual';
 addDescription.GeneratedBy.Description = p.Results.description;
-addDescription.SourceDatasets.DOI = p.Results.datasetDOI;
-addDescription.SourceDatasets.URL = p.Results.datasetURL;
-addDescription.SourceDatasets.Version = p.Results.datasetVersion;
+if ~isempty(p.Results.datasetDOI); addDescription.SourceDatasets.DOI = p.Results.datasetDOI; end
+if ~isempty(p.Results.datasetURL); addDescription.SourceDatasets.URL = p.Results.datasetURL; end
+if ~isempty(p.Results.datasetVersion); addDescription.SourceDatasets.Version = p.Results.datasetVersion; end
 
 savejson('',addDescription,[pwd filesep 'dataset_description.json']);
 
