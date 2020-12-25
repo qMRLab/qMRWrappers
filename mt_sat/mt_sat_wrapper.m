@@ -100,7 +100,7 @@ addParameter(p,'b1factor',[],validB1factor);
 addParameter(p,'qmrlab_path',[],@ischar);
 addParameter(p,'sid',[],@ischar);
 addParameter(p,'containerType',@ischar);
-addParameter(p,'containerTag',@ischar);
+addParameter(p,'containerTag',[],@ischar);
 addParameter(p,'description',@ischar);
 addParameter(p,'datasetDOI',[],@ischar);
 addParameter(p,'datasetURL',[],@ischar);
@@ -227,7 +227,7 @@ addDescription.DatasetType = 'derivative';
 addDescription.GeneratedBy.Name = 'qMRLab';
 addDescription.GeneratedBy.Version = qMRLabVer();
 addDescription.GeneratedBy.Container.Type = p.Results.containerType;
-addDescription.GeneratedBy.Container.Tag = p.Results.containerTag;
+if ~strcmp(p.Results.containerTag,'null'); addDescription.GeneratedBy.Container.Tag = p.Results.containerTag; end
 addDescription.GeneratedBy.Name2 = 'Manual';
 addDescription.GeneratedBy.Description = p.Results.description;
 if ~isempty(p.Results.datasetDOI); addDescription.SourceDatasets.DOI = p.Results.datasetDOI; end
