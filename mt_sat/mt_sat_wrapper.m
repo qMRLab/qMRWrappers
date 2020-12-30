@@ -1,4 +1,15 @@
-% Simple wrapper for fitting MTSAT data at the subject level.
+% Fit (ideally BIDS compatible) MTSAT data for a single subject.
+% This script is mainly intended (but not limited) for use with qMRFlow.
+%
+% Dependencies:
+%       
+%     qMRLab (>= v2.3.1)
+%     Octave (>= v4.2.0) or MATLAB (>R2014b)
+%
+% Documentation:
+%
+%     qMRFlow https://qmrlab.readthedocs.io/en/master/qmrflow_intro.html
+%     BIDS    http://bids-specification.readthedocs.io/ 
 %
 % Organization of the multi-subject input files:
 %
@@ -8,18 +19,17 @@
 %
 %     Custom  See more at qMRLab/qMRflow/mt_sat/USAGE.md    
 %
-%
 % Required inputs:
 %
 %    Image file names (.nii.gz):
-%        - mtw_nii --> subID_*.nii.gz (e.g. sub-01_acq-MTon_MTS.nii.gz)
-%        - pdw_nii --> subID_*.nii.gz (e.g. sub-01_acq-MToff_MTS.nii.gz)
-%        - t1w_nii --> subID_*.nii.gz (e.g. sub-01_acq-T1w_MTS.nii.gz) 
-%
+%        - mtw_nii --> subID_flip-01_mt-on_MTS.nii.gz   (e.g. sub-01_acq-sie_flip-01_mt-on_MTS.nii.gz)
+%        - pdw_nii --> subID_flip-01_mt-off_MTS.nii.gz  (e.g. sub-01_acq-sie_flip-01_mt-off_MTS.nii.gz)
+%        - t1w_nii --> subID_flip-02_mt-off_MTS.nii.gz  (e.g. sub-01_acq-sie_flip-02_mt-off_MTS.nii.gz)
+%                                           
 %    Metadata files for BIDS (.json): 
-%        - mtw_jsn --> subID_*.json
-%        - pdw_jsn --> subID_*.json
-%        - t1w_jsn --> subID_*.json
+%        - mtw_jsn --> subID_flip-01_mt-on_MTS.json
+%        - pdw_jsn --> subID_flip-01_mt-off_MTS.json
+%        - t1w_jsn --> subID_flip-02_mt-off_MTS.json
 %
 %    Metadata files for customized convention: 
 %      
@@ -39,6 +49,18 @@
 %
 %   'qmrlab_path'       Absolute path to the qMRLab's root directory. (string)
 %
+%   'sid'               Subject ID
+%
+% Parameters also include BIDS dataset_description.json fields:
+% 
+%   Documentation       https://bids-specification.readthedocs.io/en/stable/03-modality-agnostic-files.html#derived-dataset-and-pipeline-description
+%   
+%   Available params    'description'    (string)
+%                       'containerTag'   (string)
+%                       'containerType'  (string)
+%                       'datasetDOI'     (string)
+%                       'datasetURL'     (string)
+%                       'datasetVersion' (string)
 % Outputs: 
 %
 %    subID_MTsat.nii.gz       Magnetization transfer saturation
@@ -58,22 +80,25 @@
 %    
 %    FitResults.mat     Removed after fitting.
 %
-%    Subject ID         This wrapper assumes that the input data
-%                       has a subject ID prefix before the first
-%                       occurence of the '_' character.  
+%    Subject ID         If not passed, output names will be T1map 
+%                       and MTsat. Otherwise, will be appended by
+%                       any custom string provided.
+%                       In qMRFlow, any BIDS entity prevailing the 
+%                       MTS entities (flip, mt) will be recognized 
+%                       as a subject ID to be iterated over. 
 %
-% Written by: Agah Karakuzu, 2020
-% GitHub:     @agahkarakuzu
+% Written by: Agah Karakuzu, Juan Jose Velazquez Reyes | 2020
+% GitHub:     @agahkarakuzu, @jvelazquez-reyes
 %
-% Intended use: qMRFlow 
+% Intended use: qMRFlow (https://github.com/qmrlab/qmrflow)
 % =========================================================================
-
 
 function mt_sat_wrapper(mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin)
 
-%if moxunit_util_platform_is_octave
-%    warning('off','all');
-%end
+% Supress verbose Octave warnings.
+if moxunit_util_platform_is_octave
+    warning('off','all');
+end
 
 % This env var will be consumed by qMRLab
 setenv('ISNEXTFLOW','1');
@@ -141,6 +166,9 @@ if ~isempty(p.Results.sid); SID = p.Results.sid; end
 customFlag = 0;
 if all([isempty(mtw_jsn) isempty(pdw_jsn) isempty(t1w_jsn)]); customFlag = 1; end
 
+% This will be deprecated. 
+% TODO: 
+% Do not provide non-BIDS workflows.
 if customFlag
     % Collect parameters when non-BIDS pipeline is used.
     idx = find(cellfun(@isequal,varargin,repmat({'custom_json'},size(varargin)))==1);
