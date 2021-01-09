@@ -80,6 +80,11 @@ addRequired(p,'AFIData2_jsn',validJsn);
 
 %Add OPTIONAL Parameteres
 addParameter(p,'mask',[],validNii);
+addParameter(p,'b1filter','false');
+addParameter(p,'type',[],@ischar);
+addParameter(p,'order',[],@isnumeric);
+addParameter(p,'dimension',[],@ischar);
+addParameter(p,'size',[],@ismatrix);
 addParameter(p,'qmrlab_path',[],@ischar);
 addParameter(p,'sid',[],@ischar);
 addParameter(p,'containerType',@ischar);
@@ -118,6 +123,16 @@ data.AFIData2=double(load_nii_data(AFIData2_nii));
 if ~isempty(p.Results.mask); data.Mask = double(load_nii_data(p.Results.mask)); end
 if ~isempty(p.Results.sid); SID = p.Results.sid; end
 
+if ~isempty(p.Results.b1filter); filtermap = p.Results.b1filter; end
+if ~isempty(p.Results.type); Model.options.Smoothingfilter_Type = p.Results.type; end
+if ~isempty(p.Results.order); Model.options.Smoothingfilter_order = p.Results.order; end
+if ~isempty(p.Results.dimension); Model.options.Smoothingfilter_dimension = p.Results.dimension; end
+if ~isempty(p.Results.order)
+    Model.options.Smoothingfilter_sizex = p.Results.size(1);
+    Model.options.Smoothingfilter_sizey = p.Results.size(2);
+    Model.options.Smoothingfilter_sizez = p.Results.size(3);
+end
+
 customFlag = 0;
 if all([isempty(AFIData1_jsn) isempty(AFIData2_jsn)]); customFlag = 1; end
 
@@ -152,10 +167,18 @@ disp('Saving fit results...');
 FitResultsSave_nii(FitResults,AFIData1_nii,pwd);
 
 % ==== Rename outputs ==== 
-if ~isempty(SID)
-    movefile('B1map_raw.nii.gz',[SID '_TB1map.nii.gz']);
+if strcmp(filtermap,'true')
+    if ~isempty(SID)
+        movefile('B1map_filtered.nii.gz',[SID '_TB1map.nii.gz']);
+    else
+        movefile('B1map_filtered.nii.gz','TB1map.nii.gz');
+    end
 else
-    movefile('B1map_raw.nii.gz','TB1map.nii.gz');  
+    if ~isempty(SID)
+        movefile('B1map_raw.nii.gz',[SID '_TB1map.nii.gz']);
+    else
+        movefile('B1map_raw.nii.gz','TB1map.nii.gz');
+    end
 end
 
 % Save qMRLab object
