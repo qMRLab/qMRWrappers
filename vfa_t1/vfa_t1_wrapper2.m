@@ -93,7 +93,7 @@
 % Intended use: qMRFlow (https://github.com/qmrlab/qmrflow)
 % =========================================================================
 
-function vfa_t1_wrapper2(mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin)
+function vfa_t1_wrapper2(requiredArgs_nii,requiredArgs_jsn,varargin)
 
 % Supress verbose Octave warnings.
 if moxunit_util_platform_is_octave
@@ -103,6 +103,11 @@ end
 % This env var will be consumed by qMRLab
 setenv('ISNEXTFLOW','1');
 
+VFA1_nii = requiredArgs_nii{1};
+VFA2_nii = requiredArgs_nii{2};
+VFA1_jsn = requiredArgs_jsn{1};
+VFA2_jsn = requiredArgs_jsn{2};
+
 p = inputParser();
 
 %Input parameters conditions
@@ -111,12 +116,10 @@ validJsn = @(x) exist(x,'file') && strcmp(x(end-3:end),'json');
 validB1factor = @(x) isnumeric(x) && (x > 0 && x <= 1);
 
 %Add REQUIRED Parameteres
-addRequired(p,'mtw_nii',validNii);
-addRequired(p,'pdw_nii',validNii);
-addRequired(p,'t1w_nii',validNii);
-addRequired(p,'mtw_jsn',validJsn);
-addRequired(p,'pdw_jsn',validJsn);
-addRequired(p,'t1w_jsn',validJsn);
+addRequired(p,'VFA1_nii',validNii);
+addRequired(p,'VFA2_nii',validNii);
+addRequired(p,'VFA1_jsn',validJsn);
+addRequired(p,'VFA2_jsn',validJsn);
 
 %Add OPTIONAL Parameteres
 addParameter(p,'mask',[],validNii);
@@ -131,7 +134,7 @@ addParameter(p,'datasetDOI',[],@ischar);
 addParameter(p,'datasetURL',[],@ischar);
 addParameter(p,'datasetVersion',[],@ischar);
 
-parse(p,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin{:});
+parse(p,VFA1_nii,VFA2_nii,VFA1_jsn,VFA2_jsn,varargin{:});
 
 if ~isempty(p.Results.qmrlab_path); qMRdir = p.Results.qmrlab_path; end
 
@@ -149,46 +152,39 @@ catch
 end
 
 % ==== Set Protocol ====
-Model = mt_sat;
+Model = vfa_t1;
 data = struct();
 
+tmp = double(load_nii_data(requiredArgs_nii{1}));
+qLen = length(requiredArgs_nii);
+sz = size(tmp);
+
 % Load data
-data.MTw=double(load_nii_data(mtw_nii));
-data.PDw=double(load_nii_data(pdw_nii));
-data.T1w=double(load_nii_data(t1w_nii));
+if ndims(tmp)==2
+    data.VFAData = zeros(sz(1),sz(2),1,qLen);
+elseif ndims(tmp)==3
+    data.VFAData = zeros(sz(1),sz(2),sz(3),qLen);
+end
+
+Model.Prot.VFAData.Mat = zeros(qLen,2);
+
+for ii=1:qLen
+    if ndims(tmp)==2
+        data.VFAData(:,:,ii) = double(load_nii_data(requiredArgs_nii{ii}));
+        Model.Prot.VFAData.Mat(ii,1) = getfield(json2struct(requiredArgs_jsn{ii}),'FlipAngle');
+        Model.Prot.VFAData.Mat(ii,2) = getfield(json2struct(requiredArgs_jsn{ii}),'RepetitionTimeExcitation');
+    else
+        data.VFAData(:,:,:,ii) = double(load_nii_data(requiredArgs_nii{ii}));
+        Model.Prot.VFAData.Mat(ii,1) = getfield(json2struct(requiredArgs_jsn{ii}),'FlipAngle');
+        Model.Prot.VFAData.Mat(ii,2) = getfield(json2struct(requiredArgs_jsn{ii}),'RepetitionTimeExcitation');
+    end
+end
 
 %Account for optional inputs and options
 if ~isempty(p.Results.mask); data.Mask = double(load_nii_data(p.Results.mask)); end
 if ~isempty(p.Results.b1map); data.b1map = double(load_nii_data(p.Results.b1map)); end
 if ~isempty(p.Results.b1factor); Model.options.B1correction = p.Results.b1factor; end
 if ~isempty(p.Results.sid); SID = p.Results.sid; end
-
-customFlag = 0;
-if all([isempty(mtw_jsn) isempty(pdw_jsn) isempty(t1w_jsn)]); customFlag = 1; end
-
-% This will be deprecated. 
-% TODO: 
-% Do not provide non-BIDS workflows.
-if customFlag
-    % Collect parameters when non-BIDS pipeline is used.
-    idx = find(cellfun(@isequal,varargin,repmat({'custom_json'},size(varargin)))==1);
-    prt = json2struct(varargin{idx+1});
-    
-    % Set protocol from mt_sat_prot.json
-    Model.Prot.MTw.Mat =[prt.MTw.FlipAngle prt.MTw.RepetitionTime];
-    Model.Prot.PDw.Mat =[prt.PDw.FlipAngle prt.PDw.RepetitionTime];
-    Model.Prot.T1w.Mat =[prt.T1w.FlipAngle prt.T1w.RepetitionTime];
-end
-
-if ~customFlag
-
-    % RepetitionTime in BIDS (s)
-    % qMRLab Repetition time is in (s). 
-    Model.Prot.MTw.Mat =[getfield(json2struct(mtw_jsn),'FlipAngle') getfield(json2struct(mtw_jsn),'RepetitionTime')];
-    Model.Prot.PDw.Mat =[getfield(json2struct(pdw_jsn),'FlipAngle') getfield(json2struct(pdw_jsn),'RepetitionTime')];
-    Model.Prot.T1w.Mat =[getfield(json2struct(t1w_jsn),'FlipAngle') getfield(json2struct(t1w_jsn),'RepetitionTime')];
-
-end
 
 % ==== Fit Data ====
 
@@ -210,15 +206,15 @@ FitResults.MTSAT(FitResults.MTSAT<0)=NaN;
 disp('-----------------------------');
 disp('Saving fit results...');
 
-FitResultsSave_nii(FitResults,mtw_nii,pwd);
+FitResultsSave_nii(FitResults,requiredArgs_nii,pwd);
 
 % ==== Rename outputs ==== 
 if ~isempty(SID)
     movefile('T1.nii.gz',[SID '_T1map.nii.gz']);
-    movefile('MTSAT.nii.gz',[SID '_MTsat.nii.gz']);
+    movefile('M0.nii.gz',[SID '_M0map.nii.gz']);
 else
     movefile('T1.nii.gz','T1map.nii.gz');
-    movefile('MTSAT.nii.gz','MTsat.nii.gz');    
+    movefile('M0.nii.gz','M0map.nii.gz');    
 end
 
 % Save qMRLab object
@@ -233,18 +229,18 @@ delete('FitResults.mat');
 
 % JSON files for T1map and MTsat
 addField = struct();
-addField.EstimationReference =  'Helms, G. et al. (2008), Magn Reson Med, 60:1396-1407';
-addField.EstimationAlgorithm =  'src/Models_Functions/MTSATfun/MTSAT_exec.m';
+addField.EstimationReference =  'Fram, E.K. et al. (1987), Magn Reson Imaging, 5:201-208';
+addField.EstimationAlgorithm =  'src/Models_Functions/MTV/Compute_MO_T1_OnSPGR.m';
 addField.BasedOn = [{mtw_nii},{pdw_nii},{t1w_nii}];
 
 provenance = Model.getProvenance('extra',addField);
 
 if ~isempty(SID)
     savejson('',provenance,[pwd filesep SID '_T1map.json']);
-    savejson('',provenance,[pwd filesep SID '_MTsat.json']);
+    savejson('',provenance,[pwd filesep SID '_M0map.json']);
 else
     savejson('',provenance,[pwd filesep 'T1map.json']);
-    savejson('',provenance,[pwd filesep 'MTsat.json']);
+    savejson('',provenance,[pwd filesep 'M0map.json']);
 end
 
 % JSON file for dataset_description
@@ -270,9 +266,9 @@ disp(['Success: ' SID]);
 disp('-----------------------------');
 disp('Saved: ');
 disp(['    ' SID '_T1map.nii.gz'])
-disp(['    ' SID '_MTsat.nii.gz'])
+disp(['    ' SID '_M0map.nii.gz'])
 disp(['    ' SID '_T1map.json'])
-disp(['    ' SID '_MTsat.json'])
+disp(['    ' SID '_M0map.json'])
 disp('=============================');
 end
 
