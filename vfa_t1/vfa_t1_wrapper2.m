@@ -96,17 +96,12 @@
 function vfa_t1_wrapper2(requiredArgs_nii,requiredArgs_jsn,varargin)
 
 % Supress verbose Octave warnings.
-if moxunit_util_platform_is_octave
-    warning('off','all');
-end
+%if moxunit_util_platform_is_octave
+%    warning('off','all');
+%end
 
 % This env var will be consumed by qMRLab
 setenv('ISNEXTFLOW','1');
-
-VFA1_nii = requiredArgs_nii{1};
-VFA2_nii = requiredArgs_nii{2};
-VFA1_jsn = requiredArgs_jsn{1};
-VFA2_jsn = requiredArgs_jsn{2};
 
 p = inputParser();
 
@@ -114,12 +109,6 @@ p = inputParser();
 validNii = @(x) exist(x,'file') && strcmp(x(end-5:end),'nii.gz');
 validJsn = @(x) exist(x,'file') && strcmp(x(end-3:end),'json');
 validB1factor = @(x) isnumeric(x) && (x > 0 && x <= 1);
-
-%Add REQUIRED Parameteres
-addRequired(p,'VFA1_nii',validNii);
-addRequired(p,'VFA2_nii',validNii);
-addRequired(p,'VFA1_jsn',validJsn);
-addRequired(p,'VFA2_jsn',validJsn);
 
 %Add OPTIONAL Parameteres
 addParameter(p,'mask',[],validNii);
@@ -134,7 +123,7 @@ addParameter(p,'datasetDOI',[],@ischar);
 addParameter(p,'datasetURL',[],@ischar);
 addParameter(p,'datasetVersion',[],@ischar);
 
-parse(p,VFA1_nii,VFA2_nii,VFA1_jsn,VFA2_jsn,varargin{:});
+parse(p,varargin{:});
 
 if ~isempty(p.Results.qmrlab_path); qMRdir = p.Results.qmrlab_path; end
 
@@ -148,28 +137,28 @@ catch
     else
         error('Please set qMRLab_DIR parameter in the nextflow.config file.');
     end
-    qMRLabVer;
+    qMRLabVer();
 end
 
 % ==== Set Protocol ====
 Model = vfa_t1;
 data = struct();
 
-tmp = double(load_nii_data(requiredArgs_nii{1}));
+sample = double(load_nii_data(requiredArgs_nii{1}));
 qLen = length(requiredArgs_nii);
-sz = size(tmp);
+sz = size(sample);
 
 % Load data
-if ndims(tmp)==2
+if ndims(sample)==2
     data.VFAData = zeros(sz(1),sz(2),1,qLen);
-elseif ndims(tmp)==3
+elseif ndims(sample)==3
     data.VFAData = zeros(sz(1),sz(2),sz(3),qLen);
 end
 
 Model.Prot.VFAData.Mat = zeros(qLen,2);
 
 for ii=1:qLen
-    if ndims(tmp)==2
+    if ndims(sample)==2
         data.VFAData(:,:,ii) = double(load_nii_data(requiredArgs_nii{ii}));
         Model.Prot.VFAData.Mat(ii,1) = getfield(json2struct(requiredArgs_jsn{ii}),'FlipAngle');
         Model.Prot.VFAData.Mat(ii,2) = getfield(json2struct(requiredArgs_jsn{ii}),'RepetitionTimeExcitation');
@@ -198,15 +187,15 @@ FitResults.T1(FitResults.T1==Inf)=0;
 FitResults.T1(FitResults.T1<0)=NaN;
 
 % Zero-out Inf values (caused by masking)
-FitResults.MTSAT(FitResults.MTSAT==Inf)=0;
+FitResults.MTSAT(FitResults.M0==Inf)=0;
 % Null-out negative values 
-FitResults.MTSAT(FitResults.MTSAT<0)=NaN;
+FitResults.MTSAT(FitResults.M0<0)=NaN;
 
 % ==== Save outputs ==== 
 disp('-----------------------------');
 disp('Saving fit results...');
 
-FitResultsSave_nii(FitResults,requiredArgs_nii,pwd);
+FitResultsSave_nii(FitResults,requiredArgs_nii{1},pwd);
 
 % ==== Rename outputs ==== 
 if ~isempty(SID)
@@ -219,9 +208,9 @@ end
 
 % Save qMRLab object
 if ~isempty(SID)
-    Model.saveObj([SID '_mt_sat.qmrlab.mat']);
+    Model.saveObj([SID '_vfa_t1.qmrlab.mat']);
 else
-    Model.saveObj('mt_sat.qmrlab.mat');    
+    Model.saveObj('vfa_t1.qmrlab.mat');    
 end
 
 % Remove FitResults.mat 
@@ -231,7 +220,7 @@ delete('FitResults.mat');
 addField = struct();
 addField.EstimationReference =  'Fram, E.K. et al. (1987), Magn Reson Imaging, 5:201-208';
 addField.EstimationAlgorithm =  'src/Models_Functions/MTV/Compute_MO_T1_OnSPGR.m';
-addField.BasedOn = [{mtw_nii},{pdw_nii},{t1w_nii}];
+addField.BasedOn = [{requiredArgs_nii},{requiredArgs_jsn}];
 
 provenance = Model.getProvenance('extra',addField);
 
