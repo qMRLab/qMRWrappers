@@ -103,7 +103,7 @@ Model = mp2rage;
 data = struct();
 
 % Load data
-data.MP2RAGE=double(load_nii_data(UNIT_nii));
+data.MP2RAGE=double(load_nii_data(p.Results.UNIT_nii));
 
 %Account for optional inputs and options
 if ~isempty(p.Results.b1map); data.B1map = double(load_nii_data(p.Results.b1map)); end
@@ -112,36 +112,9 @@ if ~isempty(p.Results.sid); SID = p.Results.sid; end
 %Set protocol
 Model.Prot.Hardware.Mat = getfield(json2struct(UNIT_jsn),'MagneticFieldStrength');
 Model.Prot.RepetitionTimes.Mat = [getfield(json2struct(UNIT_jsn),'RepetitionTimeInversion') getfield(json2struct(UNIT_jsn),'RepetitionTimeExcitation')];
-Model.Prot.Timing.Mat = getfield(json2struct(UNIT_jsn),'InversionTime')';
+Model.Prot.Timing.Mat = getfield(json2struct(UNIT_jsn),'InversionTime');
 Model.Prot.Sequence.Mat = getfield(json2struct(UNIT_jsn),'FlipAngle')';
-Model.Prot.NumberOfShots.Mat = getfield(json2struct(UNIT_jsn),'NumberShots')';
-
-% Convert naming to the MP2RAGE source code conventions
-MP2RAGE.B0 = MagneticFieldStrength;           % in Tesla
-MP2RAGE.TR = RepetitionTimeInversion;           % MP2RAGE TR in seconds
-MP2RAGE.TRFLASH = RepetitionTimeExcitation; % TR of the GRE readout
-MP2RAGE.TIs = InversionTime; % inversion times - time between middle of refocusing pulse and excitatoin of the k-space center encoding
-MP2RAGE.NZslices = NumberShots; % Excitations [before, after] the k-space center
-MP2RAGE.FlipDegrees = FlipAngle; % Flip angle of the two readouts in degrees
-
-% If both NumberShots are equal, then assume half/half for before/after
-if NumberShots(1) == NumberShots(2)
-    MP2RAGE.NZslices = [ceil(NumberShots(1)/2) floor(NumberShots(1)/2)]; 
-end
-
-if ~isempty(p.Results.b1map)
-    [T1corrected, MP2RAGEcorr] = T1B1correctpackageTFL(data.B1map,MP2RAGEimg,[],MP2RAGE,[],invEFF);
-            
-    FitResult.T1 = T1corrected.img;
-    FitResult.R1=1./FitResult.T1;
-    FitResult.R1(isnan(FitResult.R1))=0;
-    FitResult.MP2RAGEcor = MP2RAGEcorr.img;    
-else
-    [T1map, R1map]=T1estimateMP2RAGE(MP2RAGEimg,MP2RAGE,invEFF);
-        
-    FitResult.T1 = T1map.img;
-    FitResult.R1 = R1map.img;
-end
+Model.Prot.NumberOfShots.Mat = getfield(json2struct(UNIT_jsn),'NumberShots');
 
 % ==== Fit Data ====
 
@@ -151,28 +124,21 @@ FitResults = FitData(data,Model,0);
 disp('-----------------------------');
 disp('Saving fit results...');
 
-FitResultsSave_nii(FitResults,AFIData1_nii,pwd);
+FitResultsSave_nii(FitResults,UNIT_nii,pwd);
 
 % ==== Rename outputs ==== 
-if strcmp(filtermap,'true')
-    if ~isempty(SID)
-        movefile('B1map_filtered.nii.gz',[SID '_TB1map.nii.gz']);
-    else
-        movefile('B1map_filtered.nii.gz','TB1map.nii.gz');
-    end
+
+if ~isempty(SID)
+    movefile('T1.nii.gz',[SID '_T1map.nii.gz']);
 else
-    if ~isempty(SID)
-        movefile('B1map_raw.nii.gz',[SID '_TB1map.nii.gz']);
-    else
-        movefile('B1map_raw.nii.gz','TB1map.nii.gz');
-    end
+    movefile('T1.nii.gz','T1map.nii.gz');
 end
 
 % Save qMRLab object
 if ~isempty(SID)
-    Model.saveObj([SID '_b1_afi.qmrlab.mat']);
+    Model.saveObj([SID '_mp2rage.qmrlab.mat']);
 else
-    Model.saveObj('b1_afi.qmrlab.mat');    
+    Model.saveObj('mp2rage.qmrlab.mat');    
 end
 
 % Remove FitResults.mat 
@@ -180,16 +146,16 @@ delete('FitResults.mat');
 
 % JSON files for TB1map
 addField = struct();
-addField.EstimationReference =  'Yarnykh, VL., (2007). Magn Reson Med, 57:192-200';
-addField.EstimationAlgorithm =  'src/Models/FieldMaps/b1_afi.m';
-addField.BasedOn = [{AFIData1_nii},{AFIData2_nii}];
+addField.EstimationReference =  'Marques, José P., (2010). Neuroimage, 49(2):1271-1281';
+addField.EstimationAlgorithm =  'src/Models/T1_relaxometry/mp2rage.m';
+addField.BasedOn = {UNIT_nii};
 
 provenance = Model.getProvenance('extra',addField);
 
 if ~isempty(SID)
-    savejson('',provenance,[pwd filesep SID '_TB1map.json']);
+    savejson('',provenance,[pwd filesep SID '_T1map.json']);
 else
-    savejson('',provenance,[pwd filesep 'TB1map.json']);
+    savejson('',provenance,[pwd filesep 'T1map.json']);
 end
 
 % JSON file for dataset_description
@@ -214,8 +180,8 @@ if ~isempty(SID)
 disp(['Success: ' SID]);
 disp('-----------------------------');
 disp('Saved: ');
-disp(['    ' SID '_TB1map.nii.gz'])
-disp(['    ' SID '_TB1map.json'])
+disp(['    ' SID '_T1map.nii.gz'])
+disp(['    ' SID '_T1map.json'])
 disp('=============================');
 end
 
