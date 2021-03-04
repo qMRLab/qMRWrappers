@@ -71,6 +71,7 @@ addRequired(p,'UNIT_nii',validNii);
 addRequired(p,'UNIT_jsn',validJsn);
 
 %Add OPTIONAL Parameteres
+addParameter(p,'mask',[],validNii);
 addParameter(p,'b1map',[],validNii);
 addParameter(p,'qmrlab_path',[],@ischar);
 addParameter(p,'sid',[],@ischar);
@@ -106,6 +107,7 @@ data = struct();
 data.MP2RAGE=double(load_nii_data(p.Results.UNIT_nii));
 
 %Account for optional inputs and options
+if ~isempty(p.Results.mask); data.Mask = double(load_nii_data(p.Results.mask)); end
 if ~isempty(p.Results.b1map); data.B1map = double(load_nii_data(p.Results.b1map)); end
 if ~isempty(p.Results.sid); SID = p.Results.sid; end
 
