@@ -69,163 +69,187 @@
 % =========================================================================
 
 
-function mt_sat_wrapper(SID, mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin)
+function mt_sat_neuromod(mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin)
 
-if moxunit_util_platform_is_octave
-    warning('off','all');
-end
-
-keyval = regexp(fname,'[^-_]*','match');
-table = cell2table(keyval(2:2:end),'VariableNames',keyval(1:2:end-1));
-
-% This env var will be consumed by qMRLab
-setenv('ISNEXTFLOW','1');
-setenv('ISBIDS','1');
-
-if nargin >6
-if any(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin))))
-    idx = find(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin)))==1);
-    qMRdir = varargin{idx+1};
-end
-end 
-
-try
-    disp('=============================');
-    qMRLabVer;
-catch
-    warning('Cant find qMRLab. Adding qMRLab_DIR to the path: ');
-    if ~strcmp(qMRdir,'null')
-        qmr_init(qMRdir);
+    if moxunit_util_platform_is_octave
+        warning('off','all');
+    end
+    
+    keyval = regexp(mtw_nii,'[^-_]*','match');
+    
+    p = inputParser();
+    addParameter(p,'containerType','null',@ischar);
+    addParameter(p,'containerTag','null',@ischar);
+    addParameter(p,'description',[],@ischar);
+    addParameter(p,'datasetDOI',[],@ischar);
+    addParameter(p,'datasetURL',[],@ischar);
+    addParameter(p,'datasetVersion',[],@ischar);
+    
+    parse(p,varargin{:});
+    
+    if ismember('sub',keyval)
+        [~,idx]= ismember('sub',keyval);
+        SID = keyval{idx+1};
     else
-        error('Please set qMRLab_DIR parameter in the nextflow.config file.');
+       SID = [];
+    end    
+     
+    if ismember('ses',keyval)
+        [~,idx]= ismember('ses',keyval);
+        sesVal = keyval{idx+1};
+    else
+       sesVal = [];
+     end    
+    
+    % This env var will be consumed by qMRLab
+    setenv('ISNEXTFLOW','1');
+    setenv('ISBIDS','1');
+    
+    if nargin >6
+    if any(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin))))
+        idx = find(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin)))==1);
+        qMRdir = varargin{idx+1};
     end
-    qMRLabVer;
-end
-
-Model = mt_sat; 
-data = struct();
-
-customFlag = 0;
-if all([isempty(mtw_jsn) isempty(pdw_jsn) isempty(t1w_jsn)]); customFlag = 1; end; 
-
-% Account for optional inputs and options.
-if nargin>6
+    end 
     
-    
-    if any(cellfun(@isequal,varargin,repmat({'mask'},size(varargin))))
-        idx = find(cellfun(@isequal,varargin,repmat({'mask'},size(varargin)))==1);
-        data.Mask = double(load_nii_data(varargin{idx+1}));
+    try
+        disp('=============================');
+        qMRLabVer;
+    catch
+        warning('Cant find qMRLab. Adding qMRLab_DIR to the path: ');
+        if ~strcmp(qMRdir,'null')
+            qmr_init(qMRdir);
+        else
+            error('Please set qMRLab_DIR parameter in the nextflow.config file.');
+        end
+        qMRLabVer;
     end
     
-    if any(cellfun(@isequal,varargin,repmat({'b1map'},size(varargin))))
-        idx = find(cellfun(@isequal,varargin,repmat({'b1map'},size(varargin)))==1);
-        data.B1map = double(load_nii_data(varargin{idx+1}));
-    end
+    Model = mt_sat; 
+    data = struct();
     
-    if any(cellfun(@isequal,varargin,repmat({'b1factor'},size(varargin))))
-        idx = find(cellfun(@isequal,varargin,repmat({'b1factor'},size(varargin)))==1);
-        Model.options.B1correctionfactor = varargin{idx+1};
-    end
+    customFlag = 0;
+    if all([isempty(mtw_jsn) isempty(pdw_jsn) isempty(t1w_jsn)]); customFlag = 1; end; 
     
-    
-    
-    if customFlag
-        % Collect parameters when non-BIDS pipeline is used.
+    % Account for optional inputs and options.
+    if nargin>6
         
-           
-           idx = find(cellfun(@isequal,varargin,repmat({'custom_json'},size(varargin)))==1);
-           prt = json2struct(varargin{idx+1});
-           
-           % Set protocol from mt_sat_prot.json
-           Model.Prot.MTw.Mat =[prt.MTw.FlipAngle prt.MTw.RepetitionTime];
-           Model.Prot.PDw.Mat =[prt.PDw.FlipAngle prt.PDw.RepetitionTime];
-           Model.Prot.T1w.Mat =[prt.T1w.FlipAngle prt.T1w.RepetitionTime];
-           
+        
+        if any(cellfun(@isequal,varargin,repmat({'mask'},size(varargin))))
+            idx = find(cellfun(@isequal,varargin,repmat({'mask'},size(varargin)))==1);
+            data.Mask = double(load_nii_data(varargin{idx+1}));
+        end
+        
+        if any(cellfun(@isequal,varargin,repmat({'b1map'},size(varargin))))
+            idx = find(cellfun(@isequal,varargin,repmat({'b1map'},size(varargin)))==1);
+            data.B1map = double(load_nii_data(varargin{idx+1}));
+        end
+        
+        if any(cellfun(@isequal,varargin,repmat({'b1factor'},size(varargin))))
+            idx = find(cellfun(@isequal,varargin,repmat({'b1factor'},size(varargin)))==1);
+            Model.options.B1correctionfactor = varargin{idx+1};
+        end
+        
+        
+        
+        if customFlag
+            % Collect parameters when non-BIDS pipeline is used.
+            
+               
+               idx = find(cellfun(@isequal,varargin,repmat({'custom_json'},size(varargin)))==1);
+               prt = json2struct(varargin{idx+1});
+               
+               % Set protocol from mt_sat_prot.json
+               Model.Prot.MTw.Mat =[prt.MTw.FlipAngle prt.MTw.RepetitionTime];
+               Model.Prot.PDw.Mat =[prt.PDw.FlipAngle prt.PDw.RepetitionTime];
+               Model.Prot.T1w.Mat =[prt.T1w.FlipAngle prt.T1w.RepetitionTime];
+               
+        end
+             
+        
     end
-         
     
-end
-
-
-% Load data
-data.MTw=double(load_nii_data(mtw_nii));
-data.PDw=double(load_nii_data(pdw_nii));
-data.T1w=double(load_nii_data(t1w_nii));
-
-
-if ~customFlag
-
-    Model.Prot.MTw.Mat =[getfield(json2struct(mtw_jsn),'FlipAngle') getfield(json2struct(mtw_jsn),'RepetitionTime')];
-    Model.Prot.PDw.Mat =[getfield(json2struct(pdw_jsn),'FlipAngle') getfield(json2struct(pdw_jsn),'RepetitionTime')];
-    Model.Prot.T1w.Mat =[getfield(json2struct(t1w_jsn),'FlipAngle') getfield(json2struct(t1w_jsn),'RepetitionTime')];
-
-end
-
-% ==== Fit Data ====
-
-FitResults = FitData(data,Model,0);
-
-% ==== Weed out spurious values ==== 
-
-% Zero-out Inf values (caused by masking)
-FitResults.T1(FitResults.T1==Inf)=0;
-% Null-out negative values 
-FitResults.T1(FitResults.T1<0)=NaN;
-
-% Zero-out Inf values (caused by masking)
-FitResults.MTSAT(FitResults.MTSAT==Inf)=0;
-% Null-out negative values 
-FitResults.MTSAT(FitResults.MTSAT<0)=NaN;
-
-addDescription = struct();
-addDescription.BasedOn = [{nii_array},{json_array}];
-addDescription.GeneratedBy.Container.Type = p.Results.containerType;
-if ~strcmp(p.Results.containerTag,'null'); addDescription.GeneratedBy.Container.Tag = p.Results.containerTag; end
-addDescription.GeneratedBy.Name2 = 'Manual';
-addDescription.GeneratedBy.Description = p.Results.description;
-if ~isempty(p.Results.datasetDOI); addDescription.SourceDatasets.DOI = p.Results.datasetDOI; end
-if ~isempty(p.Results.datasetURL); addDescription.SourceDatasets.URL = p.Results.datasetURL; end
-if ~isempty(p.Results.datasetVersion); addDescription.SourceDatasets.Version = p.Results.datasetVersion; end
-
-FitResultsSave_nii(FitResults,nii_array{1},pwd);
-
-FitResultsSave_BIDS(FitResults,nii_array{1},SID,'injectToJSON',addDescription);
-
-
-Model.saveObj([SID '_mt_ratio.qmrlab.mat']);
-
-
-
-% Remove FitResults.mat 
-delete('FitResults.mat');
-
-if moxunit_util_platform_is_octave
-    warning('on','all');
-end
-
-setenv('ISBIDS','');
-setenv('ISNEXTFLOW','');
-end
-
-function out = json2struct(filename)
-
-tmp = loadjson(filename);
-
-if isstruct(tmp)
-
-    out = tmp;
-
-else
-
-    str = cell2struct(tmp,'tmp');
-    out = [str.tmp];
-
-end
-
-end 
-
-function qmr_init(qmrdir)
-
-run([qmrdir filesep 'startup.m']);
-
-end
+    
+    % Load data
+    data.MTw=double(load_nii_data(mtw_nii));
+    data.PDw=double(load_nii_data(pdw_nii));
+    data.T1w=double(load_nii_data(t1w_nii));
+    
+    
+    if ~customFlag
+    
+        Model.Prot.MTw.Mat =[getfield(json2struct(mtw_jsn),'FlipAngle') getfield(json2struct(mtw_jsn),'RepetitionTime')];
+        Model.Prot.PDw.Mat =[getfield(json2struct(pdw_jsn),'FlipAngle') getfield(json2struct(pdw_jsn),'RepetitionTime')];
+        Model.Prot.T1w.Mat =[getfield(json2struct(t1w_jsn),'FlipAngle') getfield(json2struct(t1w_jsn),'RepetitionTime')];
+    
+    end
+    
+    % ==== Fit Data ====
+    
+    FitResults = FitData(data,Model,0);
+    
+    % ==== Weed out spurious values ==== 
+    
+    % Zero-out Inf values (caused by masking)
+    FitResults.T1(FitResults.T1==Inf)=0;
+    % Null-out negative values 
+    FitResults.T1(FitResults.T1<0)=NaN;
+    
+    % Zero-out Inf values (caused by masking)
+    FitResults.MTSAT(FitResults.MTSAT==Inf)=0;
+    % Null-out negative values 
+    FitResults.MTSAT(FitResults.MTSAT<0)=NaN;
+    
+    addDescription = struct();
+    addDescription.BasedOn = [{mtw_nii},{pdw_nii},{t1w_nii}];
+    addDescription.GeneratedBy.Container.Type = p.Results.containerType;
+    if ~strcmp(p.Results.containerTag,'null'); addDescription.GeneratedBy.Container.Tag = p.Results.containerTag; end
+    if isempty(p.Results.description)
+        addDescription.GeneratedBy.Description = 'qMRFlow';
+    else
+        addDescription.GeneratedBy.Description = p.Results.description;
+    end
+    if ~isempty(p.Results.datasetDOI); addDescription.SourceDatasets.DOI = p.Results.datasetDOI; end
+    if ~isempty(p.Results.datasetURL); addDescription.SourceDatasets.URL = p.Results.datasetURL; end
+    if ~isempty(p.Results.datasetVersion); addDescription.SourceDatasets.Version = p.Results.datasetVersion; end
+    
+    FitResultsSave_BIDS(FitResults,t1w_nii,SID,'injectToJSON',addDescription,'ses',sesVal,'sesFolder',true);
+    
+    
+    Model.saveObj([SID '_mt_sat.qmrlab.mat']);
+    
+    
+    
+    % Remove FitResults.mat 
+    delete('FitResults.mat');
+    
+    if moxunit_util_platform_is_octave
+        warning('on','all');
+    end
+    
+    setenv('ISBIDS','');
+    setenv('ISNEXTFLOW','');
+    end
+    
+    function out = json2struct(filename)
+    
+    tmp = loadjson(filename);
+    
+    if isstruct(tmp)
+    
+        out = tmp;
+    
+    else
+    
+        str = cell2struct(tmp,'tmp');
+        out = [str.tmp];
+    
+    end
+    
+    end 
+    
+    function qmr_init(qmrdir)
+    
+    run([qmrdir filesep 'startup.m']);
+    
+    end
