@@ -69,14 +69,18 @@
 % =========================================================================
 
 
-function mt_sat_wrapper(mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin)
+function mt_sat_wrapper(SID, mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin)
 
-%if moxunit_util_platform_is_octave
-%    warning('off','all');
-%end
+if moxunit_util_platform_is_octave
+    warning('off','all');
+end
+
+keyval = regexp(fname,'[^-_]*','match');
+table = cell2table(keyval(2:2:end),'VariableNames',keyval(1:2:end-1));
 
 % This env var will be consumed by qMRLab
 setenv('ISNEXTFLOW','1');
+setenv('ISBIDS','1');
 
 if nargin >6
 if any(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin))))
@@ -123,12 +127,6 @@ if nargin>6
         Model.options.B1correctionfactor = varargin{idx+1};
     end
     
-    if any(cellfun(@isequal,varargin,repmat({'sid'},size(varargin))))
-        idx = find(cellfun(@isequal,varargin,repmat({'sid'},size(varargin)))==1);
-        SID = varargin{idx+1};
-    else
-        SID = [];
-    end
     
     
     if customFlag
@@ -157,8 +155,6 @@ data.T1w=double(load_nii_data(t1w_nii));
 
 if ~customFlag
 
-    % RepetitionTime in BIDS (s)
-    % qMRLab Repetition time is in (s). 
     Model.Prot.MTw.Mat =[getfield(json2struct(mtw_jsn),'FlipAngle') getfield(json2struct(mtw_jsn),'RepetitionTime')];
     Model.Prot.PDw.Mat =[getfield(json2struct(pdw_jsn),'FlipAngle') getfield(json2struct(pdw_jsn),'RepetitionTime')];
     Model.Prot.T1w.Mat =[getfield(json2struct(t1w_jsn),'FlipAngle') getfield(json2struct(t1w_jsn),'RepetitionTime')];
@@ -181,62 +177,34 @@ FitResults.MTSAT(FitResults.MTSAT==Inf)=0;
 % Null-out negative values 
 FitResults.MTSAT(FitResults.MTSAT<0)=NaN;
 
-% ==== Save outputs ==== 
-disp('-----------------------------');
-disp('Saving fit results...');
+addDescription = struct();
+addDescription.BasedOn = [{nii_array},{json_array}];
+addDescription.GeneratedBy.Container.Type = p.Results.containerType;
+if ~strcmp(p.Results.containerTag,'null'); addDescription.GeneratedBy.Container.Tag = p.Results.containerTag; end
+addDescription.GeneratedBy.Name2 = 'Manual';
+addDescription.GeneratedBy.Description = p.Results.description;
+if ~isempty(p.Results.datasetDOI); addDescription.SourceDatasets.DOI = p.Results.datasetDOI; end
+if ~isempty(p.Results.datasetURL); addDescription.SourceDatasets.URL = p.Results.datasetURL; end
+if ~isempty(p.Results.datasetVersion); addDescription.SourceDatasets.Version = p.Results.datasetVersion; end
 
-FitResultsSave_nii(FitResults,mtw_nii,pwd);
+FitResultsSave_nii(FitResults,nii_array{1},pwd);
 
-% ==== Rename outputs ==== 
-if ~isempty(SID)
-    movefile('T1.nii.gz',[SID '_T1map.nii.gz']);
-    movefile('MTSAT.nii.gz',[SID '_MTsat.nii.gz']);
-else
-    movefile('T1.nii.gz','T1map.nii.gz');
-    movefile('MTSAT.nii.gz','MTsat.nii.gz');    
-end
+FitResultsSave_BIDS(FitResults,nii_array{1},SID,'injectToJSON',addDescription);
 
-% Save qMRLab object
-if ~isempty(SID)
-    Model.saveObj([SID '_mt_sat.qmrlab.mat']);
-else
-    Model.saveObj('mt_sat.qmrlab.mat');    
-end
+
+Model.saveObj([SID '_mt_ratio.qmrlab.mat']);
+
+
 
 % Remove FitResults.mat 
 delete('FitResults.mat');
-
-addField = struct();
-addField.EstimationReference =  'Helms, G. et al. (2008), Magn Reson Med, 60:1396-1407';
-addField.EstimationAlgorithm =  'src/Models_Functions/MTSATfun/MTSAT_exec.m';
-addField.BasedOn = [{mtw_nii},{pdw_nii},{t1w_nii}];
-
-provenance = Model.getProvenance('extra',addField);
-
-if ~isempty(SID)
-    savejson('',provenance,[pwd filesep SID '_T1map.json']);
-    savejson('',provenance,[pwd filesep SID '_MTsat.json']);
-else
-    savejson('',provenance,[pwd filesep 'T1map.json']);
-    savejson('',provenance,[pwd filesep 'MTsat.json']);
-end
-
-if ~isempty(SID)
-disp(['Success: ' SID]);
-disp('-----------------------------');
-disp('Saved: ');
-disp(['    ' SID '_T1map.nii.gz'])
-disp(['    ' SID '_MTsat.nii.gz'])
-disp(['    ' SID '_T1map.json'])
-disp(['    ' SID '_MTsat.json'])
-disp('=============================');
-end
 
 if moxunit_util_platform_is_octave
     warning('on','all');
 end
 
-
+setenv('ISBIDS','');
+setenv('ISNEXTFLOW','');
 end
 
 function out = json2struct(filename)
