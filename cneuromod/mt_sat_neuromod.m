@@ -98,7 +98,14 @@ function mt_sat_neuromod(SID,targetDir,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t
         sesVal = keyval{idx+1};
     else
        sesVal = [];
-     end    
+    end
+    
+    if ismember('sub',keyval)
+        [~,idx]= ismember('sub',keyval);
+        subVal = keyval{idx+1};
+    else
+       subVal = SID;
+    end   
     
     % This env var will be consumed by qMRLab
     setenv('ISNEXTFLOW','1');
@@ -212,7 +219,7 @@ function mt_sat_neuromod(SID,targetDir,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t
     if ~isempty(p.Results.datasetURL); addDescription.SourceDatasets.URL = p.Results.datasetURL; end
     if ~isempty(p.Results.datasetVersion); addDescription.SourceDatasets.Version = p.Results.datasetVersion; end
     
-    outPrefix = FitResultsSave_BIDS(FitResults,t1w_nii,SID,'injectToJSON',addDescription,'ses',sesVal,'sesFolder',sesFolder,'targetDir',targetDir);
+    outPrefix = FitResultsSave_BIDS(FitResults,t1w_nii,subVal,'injectToJSON',addDescription,'ses',sesVal,'sesFolder',sesFolder,'targetDir',targetDir);
     
     Model.saveObj([outPrefix '_mt_sat.qmrlab.mat']);
     
