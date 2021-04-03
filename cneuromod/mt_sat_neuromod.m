@@ -69,13 +69,15 @@
 % =========================================================================
 
 
-function mt_sat_neuromod(SID,targetDir,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin)
+function mt_sat_neuromod(SID,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,varargin)
 
     disp('Runnning mtsat neuromod latest');
     
     if moxunit_util_platform_is_octave
         warning('off','all');
     end
+    
+    validDir = @(x) exist(x,'dir');
     
     keyval = regexp(SID,'[^-_]*','match');
     
@@ -87,6 +89,7 @@ function mt_sat_neuromod(SID,targetDir,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t
     addParameter(p,'datasetURL',[],@ischar);
     addParameter(p,'datasetVersion',[],@ischar);
     addParameter(p,'sesFolder',[],@islogical);
+    addParameter(p,'targetDir',[],validDir);
     
     parse(p,varargin{:});
     
@@ -174,6 +177,7 @@ function mt_sat_neuromod(SID,targetDir,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t
              
         
     end
+       
     
     
     % Load data
@@ -219,7 +223,7 @@ function mt_sat_neuromod(SID,targetDir,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t
     if ~isempty(p.Results.datasetURL); addDescription.SourceDatasets.URL = p.Results.datasetURL; end
     if ~isempty(p.Results.datasetVersion); addDescription.SourceDatasets.Version = p.Results.datasetVersion; end
     
-    outPrefix = FitResultsSave_BIDS(FitResults,t1w_nii,subVal,'injectToJSON',addDescription,'ses',sesVal,'sesFolder',sesFolder,'targetDir',targetDir);
+    outPrefix = FitResultsSave_BIDS(FitResults,t1w_nii,SID,'injectToJSON',addDescription,'sesFolder',sesFolder);
     
     Model.saveObj([outPrefix '_mt_sat.qmrlab.mat']);
     
