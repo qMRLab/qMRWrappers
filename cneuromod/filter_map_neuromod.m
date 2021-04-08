@@ -59,17 +59,52 @@
 % =========================================================================
 
 
-function filter_map_wrapper(b1plus_nii,varargin)
+function filter_map_neuromod(SID,b1plus_nii,varargin)
 
-    %if moxunit_util_platform_is_octave
-    %    warning('off','all');
-    %end
+    disp('Runnning mtsat neuromod latest');
+
+    if moxunit_util_platform_is_octave
+       warning('off','all');
+    end
+    
+    validDir = @(x) exist(x,'dir');
+    
+    keyval = regexp(SID,'[^-_]*','match');
+    
+    p = inputParser();
+    addParameter(p,'containerType','null',@ischar);
+    addParameter(p,'containerTag','null',@ischar);
+    addParameter(p,'description',[],@ischar);
+    addParameter(p,'datasetDOI',[],@ischar);
+    addParameter(p,'datasetURL',[],@ischar);
+    addParameter(p,'datasetVersion',[],@ischar);
+    addParameter(p,'sesFolder',[],@islogical);
+    addParameter(p,'targetDir',[],validDir);
+    
+    parse(p,varargin{:});
+    
+    % Capture session folder flag
+    sesFolder = p.Results.sesFolder; 
+
+    if ismember('ses',keyval)
+        [~,idx]= ismember('ses',keyval);
+        sesVal = keyval{idx+1};
+    else
+       sesVal = [];
+    end
+    
+    if ismember('sub',keyval)
+        [~,idx]= ismember('sub',keyval);
+        subVal = keyval{idx+1};
+    else
+       subVal = SID;
+    end
     
     % This env var will be consumed by qMRLab
     setenv('ISNEXTFLOW','1');
-    
-    
-    if nargin>1
+    setenv('ISBIDS','1');
+
+    if nargin > 2
         if any(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin))))
             idx = find(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin)))==1);
             qMRdir = varargin{idx+1};
@@ -92,7 +127,7 @@ function filter_map_wrapper(b1plus_nii,varargin)
     Model = filter_map; 
     data = struct();
     
-    if nargin >1
+    if nargin > 2
 
         if any(cellfun(@isequal,varargin,repmat({'siemens'},size(varargin))))
             idx = find(cellfun(@isequal,varargin,repmat({'siemens'},size(varargin)))==1);
@@ -144,8 +179,6 @@ function filter_map_wrapper(b1plus_nii,varargin)
     % Check if Octave is OK with inputParser (and MATLAB version range)
     % If so use it to reduce the verbosity below.
 
-    
-
     if issiemens
         data.Raw = data.Raw./800;
     end
@@ -155,62 +188,17 @@ function filter_map_wrapper(b1plus_nii,varargin)
     
     FitResults = FitData(data,Model,0);
     
-    % ==== Weed out spurious values ==== 
+    outPrefix = FitResultsSave_BIDS(FitResults,b1plus_nii,SID,'sesFolder',sesFolder);
     
-    % ==== Save outputs ==== 
-    disp('-----------------------------');
-    disp('Saving fit results...');
+    Model.saveObj([outPrefix '_filter_map.qmrlab.mat']);
     
-    FitResultsSave_nii(FitResults,b1plus_nii,pwd);
-    
-    % ==== Rename outputs ==== 
-    if ~isempty(SID)
-        movefile('Filtered.nii.gz',[SID '_B1plusmap_filtered.nii.gz']);
-    else
-        movefile('Filtered.nii.gz',[SID 'B1plusmap_filtered.nii.gz']);
-    end
-    
-    % Save qMRLab object
-    if ~isempty(SID)
-        Model.saveObj([SID '_filter_map.qmrlab.mat']);
-    else
-        Model.saveObj('filter_map.qmrlab.mat');
-    end
-    
-    % Remove FitResults.mat 
-    delete('FitResults.mat');
-    
-    addField = struct();
-    addField.EstimationReference =  'qMRLab filter_map model was used';
-    addField.EstimationAlgorithm_Type =  Model.options.Smoothingfilter_Type;
-    addField.EstimationAlgorithm_Dimension =  Model.options.Smoothingfilter_Dimension;
-    addField.EstimationAlgorithm_Order =  Model.options.Smoothingfilter_order;
-    addField.EstimationAlgorithm_Size =  sz;
-
-    addField.BasedOn = {b1plus_nii};
-    
-    provenance = Model.getProvenance('extra',addField);
-    
-    if ~isempty(SID)
-        savejson('',provenance,[pwd filesep SID '_B1plusmap_filtered.json']);
-    else
-        savejson('',provenance,[pwd filesep 'B1plusmap_filtered.json']);
-    end
- 
-    if ~isempty(SID)
-    disp(['Success: ' SID]);
-    disp('-----------------------------');
-    disp('Saved: ');
-    disp(['    ' SID '_B1plusmap_filtered.nii.gz']);
-    disp(['    ' SID '_B1plusmap_filtered.json'])
-    disp('=============================');
-    end
-
     if moxunit_util_platform_is_octave
         warning('on','all');
     end
     
-    
+    setenv('ISBIDS','');
+    setenv('ISNEXTFLOW','');
+
 end
      
     

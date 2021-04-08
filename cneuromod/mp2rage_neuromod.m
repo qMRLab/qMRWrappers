@@ -51,14 +51,17 @@
 % =========================================================================
 
 
-function mp2rage_UNIT1_wrapper(UNIT_nii,UNIT_jsn,varargin)
+function mp2rage_neuromod(SID,UNIT_nii,UNIT_jsn,varargin)
 
-    %if moxunit_util_platform_is_octave
-    %    warning('off','all');
-    %end
+    disp('Runnning mtsat neuromod latest');
+
+    if moxunit_util_platform_is_octave
+       warning('off','all');
+    end
     
-    % This env var will be consumed by qMRLab
-    setenv('ISNEXTFLOW','1');
+    validDir = @(x) exist(x,'dir');
+    
+    keyval = regexp(SID,'[^-_]*','match');
     
     p = inputParser();
     
@@ -83,6 +86,27 @@ function mp2rage_UNIT1_wrapper(UNIT_nii,UNIT_jsn,varargin)
     addParameter(p,'datasetVersion',[],@ischar);
     
     parse(p,UNIT_nii,UNIT_jsn,varargin{:});
+    
+    % Capture session folder flag
+    sesFolder = p.Results.sesFolder; 
+
+    if ismember('ses',keyval)
+        [~,idx]= ismember('ses',keyval);
+        sesVal = keyval{idx+1};
+    else
+       sesVal = [];
+    end
+    
+    if ismember('sub',keyval)
+        [~,idx]= ismember('sub',keyval);
+        subVal = keyval{idx+1};
+    else
+       subVal = SID;
+    end   
+    
+    % This env var will be consumed by qMRLab
+    setenv('ISNEXTFLOW','1');
+    setenv('ISBIDS','1');
     
     if ~isempty(p.Results.qmrlab_path); qMRdir = p.Results.qmrlab_path; end
     
@@ -122,77 +146,32 @@ function mp2rage_UNIT1_wrapper(UNIT_nii,UNIT_jsn,varargin)
     
     FitResults = FitData(data,Model,0);
     
-    % ==== Save outputs ==== 
-    disp('-----------------------------');
-    disp('Saving fit results...');
-    
-    FitResultsSave_nii(FitResults,UNIT_nii,pwd);
-    
-    % ==== Rename outputs ==== 
-    
-    if ~isempty(SID)
-        movefile('T1.nii.gz',[SID '_T1map.nii.gz']);
-    else
-        movefile('T1.nii.gz','T1map.nii.gz');
-    end
-    
-    % Save qMRLab object
-    if ~isempty(SID)
-        Model.saveObj([SID '_mp2rage.qmrlab.mat']);
-    else
-        Model.saveObj('mp2rage.qmrlab.mat');    
-    end
-    
-    % Remove FitResults.mat 
-    delete('FitResults.mat');
-    
-    % JSON files for TB1map
-    addField = struct();
-    addField.EstimationReference =  'Marques, José P., (2010). Neuroimage, 49(2):1271-1281';
-    addField.EstimationAlgorithm =  'src/Models/T1_relaxometry/mp2rage.m';
-    addField.BasedOn = {UNIT_nii};
-    
-    provenance = Model.getProvenance('extra',addField);
-    
-    if ~isempty(SID)
-        savejson('',provenance,[pwd filesep SID '_T1map.json']);
-    else
-        savejson('',provenance,[pwd filesep 'T1map.json']);
-    end
-    
     % JSON file for dataset_description
     addDescription = struct();
-    addDescription.Name = 'qMRLab Outputs';
-    addDescription.BIDSVersion = '1.5.0';
-    addDescription.DatasetType = 'derivative';
-    addDescription.GeneratedBy.Name = 'qMRLab';
-    addDescription.GeneratedBy.Version = qMRLabVer();
+    addDescription.BasedOn = [{UNIT_nii}];
     addDescription.GeneratedBy.Container.Type = p.Results.containerType;
     if ~strcmp(p.Results.containerTag,'null'); addDescription.GeneratedBy.Container.Tag = p.Results.containerTag; end
-    addDescription.GeneratedBy.Name2 = 'Manual';
-    addDescription.GeneratedBy.Description = p.Results.description;
+    if isempty(p.Results.description)
+        addDescription.GeneratedBy.Description = 'qMRFlow';
+    else
+        addDescription.GeneratedBy.Description = p.Results.description;
+    end
     if ~isempty(p.Results.datasetDOI); addDescription.SourceDatasets.DOI = p.Results.datasetDOI; end
     if ~isempty(p.Results.datasetURL); addDescription.SourceDatasets.URL = p.Results.datasetURL; end
     if ~isempty(p.Results.datasetVersion); addDescription.SourceDatasets.Version = p.Results.datasetVersion; end
     
-    savejson('',addDescription,[pwd filesep 'dataset_description.json']);
+    outPrefix = FitResultsSave_BIDS(FitResults,UNIT_nii,SID,'injectToJSON',addDescription,'sesFolder',sesFolder);
     
-    
-    if ~isempty(SID)
-    disp(['Success: ' SID]);
-    disp('-----------------------------');
-    disp('Saved: ');
-    disp(['    ' SID '_T1map.nii.gz'])
-    disp(['    ' SID '_T1map.json'])
-    disp('=============================');
-    end
+    Model.saveObj([outPrefix '_mp2rage.qmrlab.mat']);
     
     if moxunit_util_platform_is_octave
         warning('on','all');
     end
     
-    
-    end
+    setenv('ISBIDS','');
+    setenv('ISNEXTFLOW','');
+
+end
     
     function out = json2struct(filename)
     
