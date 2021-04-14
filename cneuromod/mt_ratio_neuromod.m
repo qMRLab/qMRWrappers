@@ -60,7 +60,7 @@ function mt_ratio_neuromod(SID,mton_nii,mtoff_nii,varargin)
     addParameter(p,'datasetDOI',[],@ischar);
     addParameter(p,'datasetURL',[],@ischar);
     addParameter(p,'datasetVersion',[],@ischar);
-    addParameter(p,'sesFolder',[],@islogical);
+    addParameter(p,'sesFolder',false,@islogical);
     addParameter(p,'targetDir',[],validDir);
     
     parse(p,varargin{:});

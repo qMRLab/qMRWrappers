@@ -84,7 +84,7 @@ function mp2rage_neuromod(SID,UNIT_nii,UNIT_jsn,varargin)
     addParameter(p,'datasetDOI',[],@ischar);
     addParameter(p,'datasetURL',[],@ischar);
     addParameter(p,'datasetVersion',[],@ischar);
-    addParameter(p,'sesFolder',[],@islogical);
+    addParameter(p,'sesFolder',false,@islogical);
     addParameter(p,'targetDir',[],validDir);
     
     parse(p,SID,UNIT_nii,UNIT_jsn,varargin{:});
@@ -141,11 +141,25 @@ function mp2rage_neuromod(SID,UNIT_nii,UNIT_jsn,varargin)
     if ~isempty(p.Results.b1map); data.B1map = double(load_nii_data(p.Results.b1map)); end
     
     %Set protocol
-    Model.Prot.Hardware.Mat = getfield(json2struct(UNIT_jsn),'MagneticFieldStrength');
-    Model.Prot.RepetitionTimes.Mat = [getfield(json2struct(UNIT_jsn),'RepetitionTimeInversion') getfield(json2struct(UNIT_jsn),'RepetitionTimeExcitation')];
-    Model.Prot.Timing.Mat = getfield(json2struct(UNIT_jsn),'InversionTime');
-    Model.Prot.Sequence.Mat = getfield(json2struct(UNIT_jsn),'FlipAngle')';
-    Model.Prot.NumberOfShots.Mat = getfield(json2struct(UNIT_jsn),'NumberShots');
+    protJson = json2struct(UNIT_jsn);
+    
+    Model.Prot.Hardware.Mat = protJson.MagneticFieldStrength;
+    
+    cprintf('magenta','<< Based on anatomical_protocol_2019-01-22.pdf >> NEUROMOD GENERIC: RepetitionTimeExcitation %s','3.5'); 
+    Model.Prot.RepetitionTimes.Mat = [protJson.RepetitionTime;0.0035];
+    
+    cprintf('magenta','<< Based on anatomical_protocol_2019-01-22.pdf >> NEUROMOD GENERIC: InversionTimes %s','0.7 and 1.5'); 
+    Model.Prot.Timing.Mat = [0.7;1.5];
+    
+    cprintf('magenta','<< Based on anatomical_protocol_2019-01-22.pdf >> NEUROMOD GENERIC: FlipAngles %s','7 and 5'); 
+    Model.Prot.Sequence.Mat = [7;5];
+    
+    % Based on https://docs.cneuromod.ca/en/latest/_static/mri/anatomical_protocol_2019-01-22.pdf
+    cprintf('magenta','<< Based on anatomical_protocol_2019-01-22.pdf >> NEUROMOD GENERIC: Assuming Slice partial fourier of %s','6/8'); 
+    nPartitions = length(protJson.global.slices.ContentTime);
+    Pre  = nPartitions*(6/8 - 0.5);
+    Post = nPartitions/2;
+    Model.Prot.NumberOfShots.Mat = [Pre;Post];
     
     % ==== Fit Data ====
     
@@ -165,7 +179,17 @@ function mp2rage_neuromod(SID,UNIT_nii,UNIT_jsn,varargin)
     if ~isempty(p.Results.datasetURL); addDescription.SourceDatasets.URL = p.Results.datasetURL; end
     if ~isempty(p.Results.datasetVersion); addDescription.SourceDatasets.Version = p.Results.datasetVersion; end
     
-    outPrefix = FitResultsSave_BIDS(FitResults,UNIT_nii,SID,'injectToJSON',addDescription,'sesFolder',sesFolder);
+    addDescription.ProtocolReference = 'https://docs.cneuromod.ca/en/latest/_static/mri/anatomical_protocol_2019-01-22.pdf';
+    addDescription.ProtocolLastUpdated = 'April 2021 by agahkarakuzu@gmail.com';
+    addDescription.RepetitionTimeInversion = protJson.RepetitionTime;
+    addDescription.RepetitionTimeExcitation = 0.0035;
+    addDescription.InversionTime = [0.7,1.5];
+    addDescription.FlipAngle = [7,5];
+    addDescription.SlicePartialFourier = 0.75;
+    addDescription.NumberOfSlices = nPartitions;
+    addDescription.NumberOfShots = [Pre Post];
+    
+    outPrefix = FitResultsSave_BIDS(FitResults,UNIT_nii,SID,'injectToJSON',addDescription,'sesFolder',sesFolder,'acq','MP2RAGE');
     
     Model.saveObj([outPrefix '_mp2rage.qmrlab.mat']);
     

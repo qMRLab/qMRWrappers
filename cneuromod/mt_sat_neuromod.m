@@ -223,7 +223,7 @@ function mt_sat_neuromod(SID,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,var
     if ~isempty(p.Results.datasetURL); addDescription.SourceDatasets.URL = p.Results.datasetURL; end
     if ~isempty(p.Results.datasetVersion); addDescription.SourceDatasets.Version = p.Results.datasetVersion; end
     
-    outPrefix = FitResultsSave_BIDS(FitResults,t1w_nii,SID,'injectToJSON',addDescription,'sesFolder',sesFolder);
+    outPrefix = FitResultsSave_BIDS(FitResults,t1w_nii,SID,'injectToJSON',addDescription,'sesFolder',sesFolder,'acq','MTS');
     
     Model.saveObj([outPrefix '_mt_sat.qmrlab.mat']);
     
