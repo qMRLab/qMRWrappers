@@ -61,7 +61,7 @@
 
 function filter_map_neuromod(SID,b1plus_nii,varargin)
 
-    disp('Runnning mtsat neuromod latest');
+    disp('Runnning filtermap neuromod latest');
 
     if moxunit_util_platform_is_octave
        warning('off','all');
@@ -72,6 +72,17 @@ function filter_map_neuromod(SID,b1plus_nii,varargin)
     keyval = regexp(SID,'[^-_]*','match');
     
     p = inputParser();
+    
+    %Input parameters conditions
+    validNii = @(x) exist(x,'file') && strcmp(x(end-5:end),'nii.gz');
+    
+    addParameter(p,'siemens',false,@islogical);
+    addParameter(p,'mask',[],validNii);
+    addParameter(p,'type',[],@ischar);
+    addParameter(p,'dimension',[],@ischar);
+    addParameter(p,'order',[],@isnumeric);
+    addParameter(p,'size',[]);
+    addParameter(p,'qmrlab_path',[],@ischar);
     addParameter(p,'containerType','null',@ischar);
     addParameter(p,'containerTag','null',@ischar);
     addParameter(p,'description',[],@ischar);
@@ -104,12 +115,7 @@ function filter_map_neuromod(SID,b1plus_nii,varargin)
     setenv('ISNEXTFLOW','1');
     setenv('ISBIDS','1');
 
-    if nargin > 2
-        if any(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin)))==1);
-            qMRdir = varargin{idx+1};
-        end
-    end
+    if ~isempty(p.Results.qmrlab_path); qMRdir = p.Results.qmrlab_path; end
 
     try
         disp('=============================');
@@ -127,51 +133,16 @@ function filter_map_neuromod(SID,b1plus_nii,varargin)
     Model = filter_map; 
     data = struct();
     
-    if nargin > 2
-
-        if any(cellfun(@isequal,varargin,repmat({'siemens'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'siemens'},size(varargin)))==1);
-            issiemens = varargin{idx+1};
-        else
-            issiemens = 0;
-        end
-
-        if any(cellfun(@isequal,varargin,repmat({'mask'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'mask'},size(varargin)))==1);
-            data.Mask = double(load_nii_data(varargin{idx+1}));
-        end
-    
-        if any(cellfun(@isequal,varargin,repmat({'type'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'type'},size(varargin)))==1);
-            Model.options.Smoothingfilter_Type = varargin{idx+1};
-        end
-    
-        if any(cellfun(@isequal,varargin,repmat({'dimension'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'dimension'},size(varargin)))==1);
-            Model.options.Smoothingfilter_Dimension = varargin{idx+1};
-        end
-    
-        if any(cellfun(@isequal,varargin,repmat({'order'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'order'},size(varargin)))==1);
-            Model.options.Smoothingfilter_order = varargin{idx+1};
-        end
-    
-        if any(cellfun(@isequal,varargin,repmat({'size'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'size'},size(varargin)))==1);
-            sz = varargin{idx+1};
-            Model.options.Smoothingfilter_sizex= sz(1);
-            Model.options.Smoothingfilter_sizey= sz(2);
-            Model.options.Smoothingfilter_sizez= sz(3);     
-        end
-        
-         if any(cellfun(@isequal,varargin,repmat({'sid'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'sid'},size(varargin)))==1);
-            SID = varargin{idx+1};
-         else
-            SID = [];
-        end
-
-    end 
+    if ~isempty(p.Results.siemens); issiemens = p.Results.siemens; end
+    if ~isempty(p.Results.mask); data.Mask = double(load_nii_data(p.Results.mask)); end
+    if ~isempty(p.Results.type); Model.options.Smoothingfilter_Type = p.Results.type; end
+    if ~isempty(p.Results.dimension); Model.options.Smoothingfilter_Dimension = p.Results.dimension; end
+    if ~isempty(p.Results.order); Model.options.Smoothingfilter_order = p.Results.order; end
+    if ~isempty(p.Results.size)
+        Model.options.Smoothingfilter_sizex = p.Results.size(1);
+        Model.options.Smoothingfilter_sizey = p.Results.size(2);
+        Model.options.Smoothingfilter_sizez = p.Results.size(3);
+    end
     
     data.Raw = double(load_nii_data(b1plus_nii));
 

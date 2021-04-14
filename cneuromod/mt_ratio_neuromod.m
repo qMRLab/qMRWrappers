@@ -37,7 +37,7 @@
 
 function mt_ratio_neuromod(SID,mton_nii,mtoff_nii,varargin)
 
-    disp('Runnning mtsat neuromod latest');
+    disp('Runnning mtratio neuromod latest');
 
     if moxunit_util_platform_is_octave
         warning('off','all');
@@ -48,6 +48,12 @@ function mt_ratio_neuromod(SID,mton_nii,mtoff_nii,varargin)
     keyval = regexp(SID,'[^-_]*','match');
     
     p = inputParser();
+    
+    %Input parameters conditions
+    validNii = @(x) exist(x,'file') && strcmp(x(end-5:end),'nii.gz');
+    
+    addParameter(p,'mask',[],validNii);
+    addParameter(p,'qmrlab_path',[],@ischar);
     addParameter(p,'containerType','null',@ischar);
     addParameter(p,'containerTag','null',@ischar);
     addParameter(p,'description',[],@ischar);
@@ -80,12 +86,7 @@ function mt_ratio_neuromod(SID,mton_nii,mtoff_nii,varargin)
     setenv('ISNEXTFLOW','1');
     setenv('ISBIDS','1');
     
-    if nargin > 3
-        if any(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin)))==1);
-            qMRdir = varargin{idx+1};
-        end
-    end 
+    if ~isempty(p.Results.qmrlab_path); qMRdir = p.Results.qmrlab_path; end
 
     try
         disp('=============================');
@@ -103,19 +104,7 @@ function mt_ratio_neuromod(SID,mton_nii,mtoff_nii,varargin)
     Model = mt_ratio;
     data = struct();
     
-    if nargin > 3
-        if any(cellfun(@isequal,varargin,repmat({'mask'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'mask'},size(varargin)))==1);
-            data.Mask = double(load_nii_data(varargin{idx+1}));
-        end
-        
-        if any(cellfun(@isequal,varargin,repmat({'sid'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'sid'},size(varargin)))==1);
-            SID = varargin{idx+1};
-        else
-            SID = [];
-        end
-    end
+    if ~isempty(p.Results.mask); data.Mask = double(load_nii_data(p.Results.mask)); end
     
     % Load data
     data.MTon=double(load_nii_data(mton_nii));
