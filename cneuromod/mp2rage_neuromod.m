@@ -51,14 +51,17 @@
 % =========================================================================
 
 
-function mp2rage_UNIT1_wrapper(UNIT_nii,UNIT_jsn,varargin)
+function mp2rage_neuromod(SID,UNIT_nii,UNIT_jsn,varargin)
 
-    %if moxunit_util_platform_is_octave
-    %    warning('off','all');
-    %end
+    disp('Runnning mp2rage neuromod latest');
+
+    if moxunit_util_platform_is_octave
+       warning('off','all');
+    end
     
-    % This env var will be consumed by qMRLab
-    setenv('ISNEXTFLOW','1');
+    validDir = @(x) exist(x,'dir');
+    
+    keyval = regexp(SID,'[^-_]*','match');
     
     p = inputParser();
     
@@ -67,6 +70,7 @@ function mp2rage_UNIT1_wrapper(UNIT_nii,UNIT_jsn,varargin)
     validJsn = @(x) exist(x,'file') && strcmp(x(end-3:end),'json');
     
     %Add REQUIRED Parameteres
+    addRequired(p,'SID',@ischar);
     addRequired(p,'UNIT_nii',validNii);
     addRequired(p,'UNIT_jsn',validJsn);
     
@@ -74,15 +78,41 @@ function mp2rage_UNIT1_wrapper(UNIT_nii,UNIT_jsn,varargin)
     addParameter(p,'mask',[],validNii);
     addParameter(p,'b1map',[],validNii);
     addParameter(p,'qmrlab_path',[],@ischar);
-    addParameter(p,'sid',[],@ischar);
-    addParameter(p,'containerType',@ischar);
-    addParameter(p,'containerTag',[],@ischar);
-    addParameter(p,'description',@ischar);
+    addParameter(p,'containerType','null',@ischar);
+    addParameter(p,'containerTag','null',@ischar);
+    addParameter(p,'description',[],@ischar);
     addParameter(p,'datasetDOI',[],@ischar);
     addParameter(p,'datasetURL',[],@ischar);
     addParameter(p,'datasetVersion',[],@ischar);
+    addParameter(p,'sesFolder',false,@islogical);
+    addParameter(p,'targetDir',[],validDir);
     
-    parse(p,UNIT_nii,UNIT_jsn,varargin{:});
+    parse(p,SID,UNIT_nii,UNIT_jsn,varargin{:});
+    
+    SID = p.Results.SID;
+    UNIT_nii = p.Results.UNIT_nii;
+    UNIT_jsn = p.Results.UNIT_jsn;
+    
+    % Capture session folder flag
+    sesFolder = p.Results.sesFolder; 
+
+    if ismember('ses',keyval)
+        [~,idx]= ismember('ses',keyval);
+        sesVal = keyval{idx+1};
+    else
+       sesVal = [];
+    end
+    
+    if ismember('sub',keyval)
+        [~,idx]= ismember('sub',keyval);
+        subVal = keyval{idx+1};
+    else
+       subVal = SID;
+    end   
+    
+    % This env var will be consumed by qMRLab
+    setenv('ISNEXTFLOW','1');
+    setenv('ISBIDS','1');
     
     if ~isempty(p.Results.qmrlab_path); qMRdir = p.Results.qmrlab_path; end
     
@@ -109,90 +139,68 @@ function mp2rage_UNIT1_wrapper(UNIT_nii,UNIT_jsn,varargin)
     %Account for optional inputs and options
     if ~isempty(p.Results.mask); data.Mask = double(load_nii_data(p.Results.mask)); end
     if ~isempty(p.Results.b1map); data.B1map = double(load_nii_data(p.Results.b1map)); end
-    if ~isempty(p.Results.sid); SID = p.Results.sid; end
     
     %Set protocol
-    Model.Prot.Hardware.Mat = getfield(json2struct(UNIT_jsn),'MagneticFieldStrength');
-    Model.Prot.RepetitionTimes.Mat = [getfield(json2struct(UNIT_jsn),'RepetitionTimeInversion') getfield(json2struct(UNIT_jsn),'RepetitionTimeExcitation')];
-    Model.Prot.Timing.Mat = getfield(json2struct(UNIT_jsn),'InversionTime');
-    Model.Prot.Sequence.Mat = getfield(json2struct(UNIT_jsn),'FlipAngle')';
-    Model.Prot.NumberOfShots.Mat = getfield(json2struct(UNIT_jsn),'NumberShots');
+    protJson = json2struct(UNIT_jsn);
+    
+    Model.Prot.Hardware.Mat = protJson.MagneticFieldStrength;
+    
+    cprintf('magenta','<< Based on anatomical_protocol_2019-01-22.pdf >> NEUROMOD GENERIC: RepetitionTimeExcitation %s','3.5'); 
+    Model.Prot.RepetitionTimes.Mat = [protJson.RepetitionTime;0.0035];
+    
+    cprintf('magenta','<< Based on anatomical_protocol_2019-01-22.pdf >> NEUROMOD GENERIC: InversionTimes %s','0.7 and 1.5'); 
+    Model.Prot.Timing.Mat = [0.7;1.5];
+    
+    cprintf('magenta','<< Based on anatomical_protocol_2019-01-22.pdf >> NEUROMOD GENERIC: FlipAngles %s','7 and 5'); 
+    Model.Prot.Sequence.Mat = [7;5];
+    
+    % Based on https://docs.cneuromod.ca/en/latest/_static/mri/anatomical_protocol_2019-01-22.pdf
+    cprintf('magenta','<< Based on anatomical_protocol_2019-01-22.pdf >> NEUROMOD GENERIC: Assuming Slice partial fourier of %s','6/8'); 
+    nPartitions = length(protJson.global.slices.ContentTime);
+    Pre  = nPartitions*(6/8 - 0.5);
+    Post = nPartitions/2;
+    Model.Prot.NumberOfShots.Mat = [Pre;Post];
     
     % ==== Fit Data ====
     
     FitResults = FitData(data,Model,0);
     
-    % ==== Save outputs ==== 
-    disp('-----------------------------');
-    disp('Saving fit results...');
-    
-    FitResultsSave_nii(FitResults,UNIT_nii,pwd);
-    
-    % ==== Rename outputs ==== 
-    
-    if ~isempty(SID)
-        movefile('T1.nii.gz',[SID '_T1map.nii.gz']);
-    else
-        movefile('T1.nii.gz','T1map.nii.gz');
-    end
-    
-    % Save qMRLab object
-    if ~isempty(SID)
-        Model.saveObj([SID '_mp2rage.qmrlab.mat']);
-    else
-        Model.saveObj('mp2rage.qmrlab.mat');    
-    end
-    
-    % Remove FitResults.mat 
-    delete('FitResults.mat');
-    
-    % JSON files for TB1map
-    addField = struct();
-    addField.EstimationReference =  'Marques, José P., (2010). Neuroimage, 49(2):1271-1281';
-    addField.EstimationAlgorithm =  'src/Models/T1_relaxometry/mp2rage.m';
-    addField.BasedOn = {UNIT_nii};
-    
-    provenance = Model.getProvenance('extra',addField);
-    
-    if ~isempty(SID)
-        savejson('',provenance,[pwd filesep SID '_T1map.json']);
-    else
-        savejson('',provenance,[pwd filesep 'T1map.json']);
-    end
-    
     % JSON file for dataset_description
     addDescription = struct();
-    addDescription.Name = 'qMRLab Outputs';
-    addDescription.BIDSVersion = '1.5.0';
-    addDescription.DatasetType = 'derivative';
-    addDescription.GeneratedBy.Name = 'qMRLab';
-    addDescription.GeneratedBy.Version = qMRLabVer();
+    addDescription.BasedOn = {UNIT_nii};
     addDescription.GeneratedBy.Container.Type = p.Results.containerType;
     if ~strcmp(p.Results.containerTag,'null'); addDescription.GeneratedBy.Container.Tag = p.Results.containerTag; end
-    addDescription.GeneratedBy.Name2 = 'Manual';
-    addDescription.GeneratedBy.Description = p.Results.description;
+    if isempty(p.Results.description)
+        addDescription.GeneratedBy.Description = 'qMRFlow';
+    else
+        addDescription.GeneratedBy.Description = p.Results.description;
+    end
     if ~isempty(p.Results.datasetDOI); addDescription.SourceDatasets.DOI = p.Results.datasetDOI; end
     if ~isempty(p.Results.datasetURL); addDescription.SourceDatasets.URL = p.Results.datasetURL; end
     if ~isempty(p.Results.datasetVersion); addDescription.SourceDatasets.Version = p.Results.datasetVersion; end
     
-    savejson('',addDescription,[pwd filesep 'dataset_description.json']);
+    addDescription.ProtocolReference = 'https://docs.cneuromod.ca/en/latest/_static/mri/anatomical_protocol_2019-01-22.pdf';
+    addDescription.ProtocolLastUpdated = 'April 2021 by agahkarakuzu@gmail.com';
+    addDescription.RepetitionTimeInversion = protJson.RepetitionTime;
+    addDescription.RepetitionTimeExcitation = 0.0035;
+    addDescription.InversionTime = [0.7,1.5];
+    addDescription.FlipAngle = [7,5];
+    addDescription.SlicePartialFourier = 0.75;
+    addDescription.NumberOfSlices = nPartitions;
+    addDescription.NumberOfShots = [Pre Post];
     
+    outPrefix = FitResultsSave_BIDS(FitResults,UNIT_nii,SID,'injectToJSON',addDescription,'sesFolder',sesFolder,'acq','MP2RAGE');
     
-    if ~isempty(SID)
-    disp(['Success: ' SID]);
-    disp('-----------------------------');
-    disp('Saved: ');
-    disp(['    ' SID '_T1map.nii.gz'])
-    disp(['    ' SID '_T1map.json'])
-    disp('=============================');
-    end
+    Model.saveObj([outPrefix '_mp2rage.qmrlab.mat']);
     
     if moxunit_util_platform_is_octave
         warning('on','all');
     end
     
-    
-    end
+    setenv('ISBIDS','');
+    setenv('ISNEXTFLOW','');
+
+end
     
     function out = json2struct(filename)
     

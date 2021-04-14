@@ -59,22 +59,63 @@
 % =========================================================================
 
 
-function filter_map_wrapper(b1plus_nii,varargin)
+function filter_map_neuromod(SID,b1plus_nii,varargin)
 
-    %if moxunit_util_platform_is_octave
-    %    warning('off','all');
-    %end
+    disp('Runnning filtermap neuromod latest');
+
+    if moxunit_util_platform_is_octave
+       warning('off','all');
+    end
+    
+    validDir = @(x) exist(x,'dir');
+    
+    keyval = regexp(SID,'[^-_]*','match');
+    
+    p = inputParser();
+    
+    %Input parameters conditions
+    validNii = @(x) exist(x,'file') && strcmp(x(end-5:end),'nii.gz');
+    
+    addParameter(p,'siemens',false,@islogical);
+    addParameter(p,'mask',[],validNii);
+    addParameter(p,'type',[],@ischar);
+    addParameter(p,'dimension',[],@ischar);
+    addParameter(p,'order',[],@isnumeric);
+    addParameter(p,'size',[]);
+    addParameter(p,'qmrlab_path',[],@ischar);
+    addParameter(p,'containerType','null',@ischar);
+    addParameter(p,'containerTag','null',@ischar);
+    addParameter(p,'description',[],@ischar);
+    addParameter(p,'datasetDOI',[],@ischar);
+    addParameter(p,'datasetURL',[],@ischar);
+    addParameter(p,'datasetVersion',[],@ischar);
+    addParameter(p,'sesFolder',[],@islogical);
+    addParameter(p,'targetDir',[],validDir);
+    
+    parse(p,varargin{:});
+    
+    % Capture session folder flag
+    sesFolder = p.Results.sesFolder; 
+
+    if ismember('ses',keyval)
+        [~,idx]= ismember('ses',keyval);
+        sesVal = keyval{idx+1};
+    else
+       sesVal = [];
+    end
+    
+    if ismember('sub',keyval)
+        [~,idx]= ismember('sub',keyval);
+        subVal = keyval{idx+1};
+    else
+       subVal = SID;
+    end
     
     % This env var will be consumed by qMRLab
     setenv('ISNEXTFLOW','1');
-    
-    
-    if nargin>1
-        if any(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin)))==1);
-            qMRdir = varargin{idx+1};
-        end
-    end
+    setenv('ISBIDS','1');
+
+    if ~isempty(p.Results.qmrlab_path); qMRdir = p.Results.qmrlab_path; end
 
     try
         disp('=============================');
@@ -92,59 +133,22 @@ function filter_map_wrapper(b1plus_nii,varargin)
     Model = filter_map; 
     data = struct();
     
-    if nargin >1
-
-        if any(cellfun(@isequal,varargin,repmat({'siemens'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'siemens'},size(varargin)))==1);
-            issiemens = varargin{idx+1};
-        else
-            issiemens = 0;
-        end
-
-        if any(cellfun(@isequal,varargin,repmat({'mask'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'mask'},size(varargin)))==1);
-            data.Mask = double(load_nii_data(varargin{idx+1}));
-        end
-    
-        if any(cellfun(@isequal,varargin,repmat({'type'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'type'},size(varargin)))==1);
-            Model.options.Smoothingfilter_Type = varargin{idx+1};
-        end
-    
-        if any(cellfun(@isequal,varargin,repmat({'dimension'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'dimension'},size(varargin)))==1);
-            Model.options.Smoothingfilter_Dimension = varargin{idx+1};
-        end
-    
-        if any(cellfun(@isequal,varargin,repmat({'order'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'order'},size(varargin)))==1);
-            Model.options.Smoothingfilter_order = varargin{idx+1};
-        end
-    
-        if any(cellfun(@isequal,varargin,repmat({'size'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'size'},size(varargin)))==1);
-            sz = varargin{idx+1};
-            Model.options.Smoothingfilter_sizex= sz(1);
-            Model.options.Smoothingfilter_sizey= sz(2);
-            Model.options.Smoothingfilter_sizez= sz(3);     
-        end
-        
-         if any(cellfun(@isequal,varargin,repmat({'sid'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'sid'},size(varargin)))==1);
-            SID = varargin{idx+1};
-         else
-            SID = [];
-        end
-
-    end 
+    if ~isempty(p.Results.siemens); issiemens = p.Results.siemens; end
+    if ~isempty(p.Results.mask); data.Mask = double(load_nii_data(p.Results.mask)); end
+    if ~isempty(p.Results.type); Model.options.Smoothingfilter_Type = p.Results.type; end
+    if ~isempty(p.Results.dimension); Model.options.Smoothingfilter_Dimension = p.Results.dimension; end
+    if ~isempty(p.Results.order); Model.options.Smoothingfilter_order = p.Results.order; end
+    if ~isempty(p.Results.size)
+        Model.options.Smoothingfilter_sizex = p.Results.size(1);
+        Model.options.Smoothingfilter_sizey = p.Results.size(2);
+        Model.options.Smoothingfilter_sizez = p.Results.size(3);
+    end
     
     data.Raw = double(load_nii_data(b1plus_nii));
 
     % TODO: 
     % Check if Octave is OK with inputParser (and MATLAB version range)
     % If so use it to reduce the verbosity below.
-
-    
 
     if issiemens
         data.Raw = data.Raw./800;
@@ -155,62 +159,17 @@ function filter_map_wrapper(b1plus_nii,varargin)
     
     FitResults = FitData(data,Model,0);
     
-    % ==== Weed out spurious values ==== 
+    outPrefix = FitResultsSave_BIDS(FitResults,b1plus_nii,SID,'sesFolder',sesFolder);
     
-    % ==== Save outputs ==== 
-    disp('-----------------------------');
-    disp('Saving fit results...');
+    Model.saveObj([outPrefix '_filter_map.qmrlab.mat']);
     
-    FitResultsSave_nii(FitResults,b1plus_nii,pwd);
-    
-    % ==== Rename outputs ==== 
-    if ~isempty(SID)
-        movefile('Filtered.nii.gz',[SID '_B1plusmap_filtered.nii.gz']);
-    else
-        movefile('Filtered.nii.gz',[SID 'B1plusmap_filtered.nii.gz']);
-    end
-    
-    % Save qMRLab object
-    if ~isempty(SID)
-        Model.saveObj([SID '_filter_map.qmrlab.mat']);
-    else
-        Model.saveObj('filter_map.qmrlab.mat');
-    end
-    
-    % Remove FitResults.mat 
-    delete('FitResults.mat');
-    
-    addField = struct();
-    addField.EstimationReference =  'qMRLab filter_map model was used';
-    addField.EstimationAlgorithm_Type =  Model.options.Smoothingfilter_Type;
-    addField.EstimationAlgorithm_Dimension =  Model.options.Smoothingfilter_Dimension;
-    addField.EstimationAlgorithm_Order =  Model.options.Smoothingfilter_order;
-    addField.EstimationAlgorithm_Size =  sz;
-
-    addField.BasedOn = {b1plus_nii};
-    
-    provenance = Model.getProvenance('extra',addField);
-    
-    if ~isempty(SID)
-        savejson('',provenance,[pwd filesep SID '_B1plusmap_filtered.json']);
-    else
-        savejson('',provenance,[pwd filesep 'B1plusmap_filtered.json']);
-    end
- 
-    if ~isempty(SID)
-    disp(['Success: ' SID]);
-    disp('-----------------------------');
-    disp('Saved: ');
-    disp(['    ' SID '_B1plusmap_filtered.nii.gz']);
-    disp(['    ' SID '_B1plusmap_filtered.json'])
-    disp('=============================');
-    end
-
     if moxunit_util_platform_is_octave
         warning('on','all');
     end
     
-    
+    setenv('ISBIDS','');
+    setenv('ISNEXTFLOW','');
+
 end
      
     
