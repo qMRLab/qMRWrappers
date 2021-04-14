@@ -53,7 +53,7 @@
 
 function mp2rage_neuromod(SID,UNIT_nii,UNIT_jsn,varargin)
 
-    disp('Runnning mtsat neuromod latest');
+    disp('Runnning mp2rage neuromod latest');
 
     if moxunit_util_platform_is_octave
        warning('off','all');
@@ -70,6 +70,7 @@ function mp2rage_neuromod(SID,UNIT_nii,UNIT_jsn,varargin)
     validJsn = @(x) exist(x,'file') && strcmp(x(end-3:end),'json');
     
     %Add REQUIRED Parameteres
+    addRequired(p,'SID',@ischar);
     addRequired(p,'UNIT_nii',validNii);
     addRequired(p,'UNIT_jsn',validJsn);
     
@@ -77,15 +78,20 @@ function mp2rage_neuromod(SID,UNIT_nii,UNIT_jsn,varargin)
     addParameter(p,'mask',[],validNii);
     addParameter(p,'b1map',[],validNii);
     addParameter(p,'qmrlab_path',[],@ischar);
-    addParameter(p,'sid',[],@ischar);
-    addParameter(p,'containerType',@ischar);
-    addParameter(p,'containerTag',[],@ischar);
-    addParameter(p,'description',@ischar);
+    addParameter(p,'containerType','null',@ischar);
+    addParameter(p,'containerTag','null',@ischar);
+    addParameter(p,'description',[],@ischar);
     addParameter(p,'datasetDOI',[],@ischar);
     addParameter(p,'datasetURL',[],@ischar);
     addParameter(p,'datasetVersion',[],@ischar);
+    addParameter(p,'sesFolder',[],@islogical);
+    addParameter(p,'targetDir',[],validDir);
     
-    parse(p,UNIT_nii,UNIT_jsn,varargin{:});
+    parse(p,SID,UNIT_nii,UNIT_jsn,varargin{:});
+    
+    SID = p.Results.SID;
+    UNIT_nii = p.Results.UNIT_nii;
+    UNIT_jsn = p.Results.UNIT_jsn;
     
     % Capture session folder flag
     sesFolder = p.Results.sesFolder; 
@@ -133,7 +139,6 @@ function mp2rage_neuromod(SID,UNIT_nii,UNIT_jsn,varargin)
     %Account for optional inputs and options
     if ~isempty(p.Results.mask); data.Mask = double(load_nii_data(p.Results.mask)); end
     if ~isempty(p.Results.b1map); data.B1map = double(load_nii_data(p.Results.b1map)); end
-    if ~isempty(p.Results.sid); SID = p.Results.sid; end
     
     %Set protocol
     Model.Prot.Hardware.Mat = getfield(json2struct(UNIT_jsn),'MagneticFieldStrength');
@@ -148,7 +153,7 @@ function mp2rage_neuromod(SID,UNIT_nii,UNIT_jsn,varargin)
     
     % JSON file for dataset_description
     addDescription = struct();
-    addDescription.BasedOn = [{UNIT_nii}];
+    addDescription.BasedOn = {UNIT_nii};
     addDescription.GeneratedBy.Container.Type = p.Results.containerType;
     if ~strcmp(p.Results.containerTag,'null'); addDescription.GeneratedBy.Container.Tag = p.Results.containerTag; end
     if isempty(p.Results.description)
