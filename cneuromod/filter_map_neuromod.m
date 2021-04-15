@@ -89,7 +89,7 @@ function filter_map_neuromod(SID,b1plus_nii,varargin)
     addParameter(p,'datasetDOI',[],@ischar);
     addParameter(p,'datasetURL',[],@ischar);
     addParameter(p,'datasetVersion',[],@ischar);
-    addParameter(p,'sesFolder',[],@islogical);
+    addParameter(p,'sesFolder',false,@islogical);
     addParameter(p,'targetDir',[],validDir);
     
     parse(p,varargin{:});

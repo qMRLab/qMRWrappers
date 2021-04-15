@@ -88,7 +88,7 @@ function mt_sat_neuromod(SID,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,var
     addParameter(p,'datasetDOI',[],@ischar);
     addParameter(p,'datasetURL',[],@ischar);
     addParameter(p,'datasetVersion',[],@ischar);
-    addParameter(p,'sesFolder',[],@islogical);
+    addParameter(p,'sesFolder',false,@islogical);
     addParameter(p,'targetDir',[],validDir);
     
     parse(p,varargin{:});
