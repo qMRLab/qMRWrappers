@@ -161,7 +161,7 @@ function filter_map_neuromod(SID,b1plus_nii,varargin)
     
     outPrefix = FitResultsSave_BIDS(FitResults,b1plus_nii,SID,'sesFolder',sesFolder);
     
-    Model.saveObj([outPrefix '_filter_map.qmrlab.mat']);
+    Model.saveObj([SID '_filter_map.qmrlab.mat']);
     
     if moxunit_util_platform_is_octave
         warning('on','all');

@@ -191,7 +191,7 @@ function mp2rage_neuromod(SID,UNIT_nii,UNIT_jsn,varargin)
     
     outPrefix = FitResultsSave_BIDS(FitResults,UNIT_nii,SID,'injectToJSON',addDescription,'sesFolder',sesFolder,'acq','MP2RAGE');
     
-    Model.saveObj([outPrefix '_mp2rage.qmrlab.mat']);
+    Model.saveObj([SID '_mp2rage.qmrlab.mat']);
     
     if moxunit_util_platform_is_octave
         warning('on','all');

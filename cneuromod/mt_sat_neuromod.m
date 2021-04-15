@@ -82,6 +82,12 @@ function mt_sat_neuromod(SID,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,var
     keyval = regexp(SID,'[^-_]*','match');
     
     p = inputParser();
+    validNii = @(x) exist(x,'file') && strcmp(x(end-5:end),'nii.gz');
+
+    addParameter(p,'mask',[],validNii);
+    addParameter(p,'b1map',[],validNii);
+    addParameter(p,'b1factor',[],@isnumeric);
+    addParameter(p,'qmrlab_path',[],@ischar);
     addParameter(p,'containerType','null',@ischar);
     addParameter(p,'containerTag','null',@ischar);
     addParameter(p,'description',[],@ischar);
@@ -94,7 +100,10 @@ function mt_sat_neuromod(SID,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,var
     parse(p,varargin{:});
     
     % Capture session folder flag
-    sesFolder = p.Results.sesFolder; 
+    sesFolder = p.Results.sesFolder;
+    mask = p.Results.mask;
+    b1map = p.Results.b1map;
+    b1factor = p.Results.b1factor;
 
     if ismember('ses',keyval)
         [~,idx]= ismember('ses',keyval);
@@ -114,12 +123,7 @@ function mt_sat_neuromod(SID,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,var
     setenv('ISNEXTFLOW','1');
     setenv('ISBIDS','1');
     
-    if nargin >6
-    if any(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin))))
-        idx = find(cellfun(@isequal,varargin,repmat({'qmrlab_path'},size(varargin)))==1);
-        qMRdir = varargin{idx+1};
-    end
-    end 
+    if ~isempty(p.Results.qmrlab_path); qMRdir = p.Results.qmrlab_path; end
     
     try
         disp('=============================');
@@ -137,47 +141,19 @@ function mt_sat_neuromod(SID,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,var
     Model = mt_sat; 
     data = struct();
     
-    customFlag = 0;
-    if all([isempty(mtw_jsn) isempty(pdw_jsn) isempty(t1w_jsn)]); customFlag = 1; end; 
-    
-    % Account for optional inputs and options.
-    if nargin>6
-        
-        
-        if any(cellfun(@isequal,varargin,repmat({'mask'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'mask'},size(varargin)))==1);
-            data.Mask = double(load_nii_data(varargin{idx+1}));
-        end
-        
-        if any(cellfun(@isequal,varargin,repmat({'b1map'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'b1map'},size(varargin)))==1);
-            data.B1map = double(load_nii_data(varargin{idx+1}));
-        end
-        
-        if any(cellfun(@isequal,varargin,repmat({'b1factor'},size(varargin))))
-            idx = find(cellfun(@isequal,varargin,repmat({'b1factor'},size(varargin)))==1);
-            Model.options.B1correctionfactor = varargin{idx+1};
-        end
-        
-        
-        
-        if customFlag
-            % Collect parameters when non-BIDS pipeline is used.
-            
-               
-               idx = find(cellfun(@isequal,varargin,repmat({'custom_json'},size(varargin)))==1);
-               prt = json2struct(varargin{idx+1});
-               
-               % Set protocol from mt_sat_prot.json
-               Model.Prot.MTw.Mat =[prt.MTw.FlipAngle prt.MTw.RepetitionTime];
-               Model.Prot.PDw.Mat =[prt.PDw.FlipAngle prt.PDw.RepetitionTime];
-               Model.Prot.T1w.Mat =[prt.T1w.FlipAngle prt.T1w.RepetitionTime];
-               
-        end
-             
-        
+
+    if ~isempty(mask)
+        data.Mask = double(load_nii_data(mask));
     end
-       
+
+    if ~isempty(b1map)
+        data.B1map = double(load_nii_data(b1map));
+    end
+
+    if ~isempty(b1factor)
+        Model.options.B1correctionfactor = b1factor;
+    end
+
     
     
     % Load data
@@ -186,13 +162,11 @@ function mt_sat_neuromod(SID,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,var
     data.T1w=double(load_nii_data(t1w_nii));
     
     
-    if ~customFlag
     
-        Model.Prot.MTw.Mat =[getfield(json2struct(mtw_jsn),'FlipAngle') getfield(json2struct(mtw_jsn),'RepetitionTime')];
-        Model.Prot.PDw.Mat =[getfield(json2struct(pdw_jsn),'FlipAngle') getfield(json2struct(pdw_jsn),'RepetitionTime')];
-        Model.Prot.T1w.Mat =[getfield(json2struct(t1w_jsn),'FlipAngle') getfield(json2struct(t1w_jsn),'RepetitionTime')];
+    Model.Prot.MTw.Mat =[getfield(json2struct(mtw_jsn),'FlipAngle') getfield(json2struct(mtw_jsn),'RepetitionTime')];
+    Model.Prot.PDw.Mat =[getfield(json2struct(pdw_jsn),'FlipAngle') getfield(json2struct(pdw_jsn),'RepetitionTime')];
+    Model.Prot.T1w.Mat =[getfield(json2struct(t1w_jsn),'FlipAngle') getfield(json2struct(t1w_jsn),'RepetitionTime')];
     
-    end
     
     % ==== Fit Data ====
     
@@ -225,7 +199,7 @@ function mt_sat_neuromod(SID,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,var
     
     outPrefix = FitResultsSave_BIDS(FitResults,t1w_nii,SID,'injectToJSON',addDescription,'sesFolder',sesFolder,'acq','MTS');
     
-    Model.saveObj([outPrefix '_mt_sat.qmrlab.mat']);
+    Model.saveObj([SID '_mt_sat.qmrlab.mat']);
     
     if moxunit_util_platform_is_octave
         warning('on','all');

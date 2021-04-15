@@ -136,7 +136,7 @@ function mt_ratio_neuromod(SID,mton_nii,mtoff_nii,varargin)
     
     outPrefix = FitResultsSave_BIDS(FitResults,mton_nii,SID,'injectToJSON',addDescription,'sesFolder',sesFolder);
     
-    Model.saveObj([outPrefix '_mt_ratio.qmrlab.mat']);
+    Model.saveObj([SID '_mt_ratio.qmrlab.mat']);
     
     if moxunit_util_platform_is_octave
         warning('on','all');
