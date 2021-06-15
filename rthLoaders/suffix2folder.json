@@ -1,0 +1,16 @@
+{
+"anat": [
+        "MP2RAGE",
+        "MTS",
+        "MPM",
+        "VFA",
+        "MESE",
+        "MEGRE"
+        ],
+"fmap": [
+        "TB1AFI",
+        "TB1DAM",
+        "TB1EPI",
+        "TB1AFI"]
+
+}
