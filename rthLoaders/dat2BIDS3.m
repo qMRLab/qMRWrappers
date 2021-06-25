@@ -20,6 +20,7 @@ for ii = 1:length(datList)
       mkdir(curFolder);
   end
   
+  %curFolder = pwd;
   exportBIDS(datDir,datList(ii).name,curFolder);
   
 end
@@ -179,16 +180,62 @@ if isempty(regexp(fname,'.*?(?=raw.dat)'))
         data = data(1,:) + 1i*data(2,:);
 
         data = reshape(data,[header.extent(1),header.extent(2),header.extent(3)]);
+                
+        % DICOM's coordinate system is 180 degrees rotated about the z-axis
+        % from the neuroscience/NIFTI coordinate system.
+        R = qGetR([header.geometry_QuaternionW,header.geometry_QuaternionX,header.geometry_QuaternionY,header.geometry_QuaternionZ]);
+        orderCheck = abs(round(R));
         
-        % There are two possible conventions for now, qMRPullseq will unify
-        % them later. 
-        try
-            nii = make_nii(data, [header.user_SpacingX header.user_SpacingY header.user_SpacingZ], [header.user_TranslationX header.user_TranslationY header.user_TranslationZ], 64);
-        catch
-            nii = make_nii(data, [header.mri_VoxelSpacing(1) header.mri_VoxelSpacing(2) header.mri_VoxelSpacing(3)], [header.geometry_TranslationX header.geometry_TranslationY header.geometry_TranslationZ], 64);    
+        % Infer scan (order) plane.
+        if isequal(orderCheck,[1 0 0;0 1 0;0 0 1]) % axial
+            % Flip along Y 
+            data = flip(data,2);
+            tX = header.geometry_TranslationX;
+            tY = header.geometry_TranslationY;
+            tZ = header.geometry_TranslationZ;
+        elseif isequal(orderCheck,[1 0 0;0 0 1;0 1 0]) % coronal
+            % Flip along X
+            data = flip(data,1);
+            tX = header.geometry_TranslationX;
+            tY = header.geometry_TranslationZ;
+            tZ = header.geometry_TranslationY;
+        elseif isequal(orderCheck,[0 0 1;1 0 0;0 1 0]) % sagittal
+            % Flip along Z
+            tX = header.geometry_TranslationZ;
+            tY = header.geometry_TranslationX;
+            tZ = header.geometry_TranslationY;
+            data = flip(data,3);
+        else % simulator
+            tX = 0;
+            tY = 0;
+            tZ = 0;
         end
+        
+        nii = make_nii(data, [header.mri_VoxelSpacing(1) header.mri_VoxelSpacing(2) header.mri_VoxelSpacing(3)], [tX tY tZ], 64);    
+              
+        nii.hdr.hist.qform_code = 1;
+        nii.hdr.hist.sform_code = 0;
+        nii.hdr.hist.quatern_b = header.geometry_QuaternionX;
+        nii.hdr.hist.quatern_c = header.geometry_QuaternionY;
+        nii.hdr.hist.quatern_d = header.geometry_QuaternionZ;
+        
+        nii.hdr.hist.qoffset_x = tX;
+        nii.hdr.hist.qoffset_y = tY;
+        nii.hdr.hist.qoffset_z = tZ;
+        
+        qfac = 1;
+        i = header.mri_VoxelSpacing(1);
+        j = header.mri_VoxelSpacing(2);
+        k = qfac * header.mri_VoxelSpacing(3);
+        
+        
 
+         T = [nii.hdr.hist.qoffset_x
+           nii.hdr.hist.qoffset_y
+           nii.hdr.hist.qoffset_z];
 
+        nii.hdr.hist.old_affine = [ [R * diag([i j k]);[0 0 0]] [T;1] ];
+        
         save_nii(nii,[svdir filesep fname(1:end-4) '.nii.gz']);
         header = cleanHeader(header);
         savejson('',header,[svdir filesep fname(1:end-4) '.json']);
