@@ -152,6 +152,10 @@ function filter_map_neuromod(SID,b1plus_nii,varargin)
 
     if issiemens
         data.Raw = data.Raw./800;
+    % ISBIDS is set to 1, FitData will expect
+    % inputs to be in relative % (see input_BIDS_units.json)
+    % therefore, we need to multiply it by 100 here
+    data.Raw = data.Raw.*100;
     end
 
     
