@@ -148,6 +148,7 @@ function mt_sat_neuromod(SID,mtw_nii,pdw_nii,t1w_nii,mtw_jsn,pdw_jsn,t1w_jsn,var
 
     if ~isempty(b1map)
         data.B1map = double(load_nii_data(b1map));
+        data.B1map = data.B1map./100;
     end
 
     if ~isempty(b1factor)
