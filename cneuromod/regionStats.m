@@ -29,8 +29,17 @@ for ii=1:length(maps)
             
             curMap = double(load_nii_data(maps(ii).Filename));
             curMask = double(load_nii_data(masks(jj).Filename));
-            curVec = curMap(curMask==1);
             
+            % Because of slab profile effects, mask-out the top and bottom 20 slices from the qMR maps derived from the MTsat measurements.
+            if ~isempty(maps(ii).Entity.acq)
+                if maps(ii).Entity.acq{1} == 'MTS'
+                    curMap(:,:,1:20) = 0;
+                    curMap(:,:,end-20:end) = 0;
+                end
+            end
+
+            curVec = curMap(curMask==1);
+
             curMeta = json2struct(maps(ii).Entity.json);
             csvData(it,1) = maps(ii).Entity.sub; 
             csvData(it,2) = maps(ii).Entity.ses;
