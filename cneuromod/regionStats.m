@@ -32,7 +32,7 @@ for ii=1:length(maps)
             
             % Because of slab profile effects, mask-out the top and bottom 20 slices from the qMR maps derived from the MTsat measurements.
             if ~isempty(maps(ii).Entity.acq)
-                if maps(ii).Entity.acq{1} == 'MTS'
+                if contains(maps(ii).Filename, '-MTS_') || contains(maps(ii).Filename, '_MTRmap')
                     curMap(:,:,1:20) = 0;
                     curMap(:,:,end-20:end) = 0;
                 end
